@@ -1,0 +1,4 @@
+# Shell scripts must keep Linux line endings so they run on the EC2 server
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

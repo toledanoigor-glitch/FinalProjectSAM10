@@ -1,0 +1,31 @@
+# Northbridge University IT Desk - production stack on AWS EC2.
+# Only what Mabi needs: LibreChat (reskinned) + MongoDB.
+# MongoDB has no published port, so it is reachable only inside Docker, never from the internet.
+# Start it with deploy/aws/start-mabi.sh (it writes .env from Parameter Store first).
+services:
+  api:
+    image: northbridge-itdesk-librechat:server
+    build:
+      context: ../../brand
+    container_name: LibreChat
+    restart: always
+    ports:
+      - "80:3080"
+    depends_on:
+      - mongodb
+    env_file: .env
+    environment:
+      - HOST=0.0.0.0
+      - MONGO_URI=mongodb://mongodb:27017/LibreChat
+    volumes:
+      - ../../librechat.yaml:/app/librechat.yaml:ro
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+
+  mongodb:
+    image: mongo:8.0
+    container_name: chat-mongodb
+    restart: always
+    command: mongod --noauth --bind_ip_all
+    volumes:
+      - ./data-node:/data/db
