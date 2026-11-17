@@ -14,7 +14,7 @@ ENDPOINTS=google
 # --- Google Gemini (free tier) ---
 # Get the key at https://aistudio.google.com/apikey
 GOOGLE_KEY=paste-your-key-here
-GOOGLE_MODELS=gemini-3.5-flash
+GOOGLE_MODELS=gemini-3.5-flash-lite
 
 # --- Accounts ---
 # Leave registration on until you have made your own account, then set it to false.

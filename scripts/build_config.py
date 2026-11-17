@@ -19,7 +19,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CONTENT_DIR = ROOT / "content"
 OUTPUT = ROOT / "librechat.yaml"
 
-MODEL = "gemini-3.5-flash"  # tested in LibreChat on 2026-11-16; change here if needed
+MODEL = "gemini-3.5-flash-lite"  # 3.5-flash returned 503/429 on the free tier on 2026-11-17; flash-lite has its own quota
 
 RULES = """You are Mabi, the virtual assistant of the Northbridge University IT Desk.
 You help NBU students and staff with IT questions: NBU accounts and passwords, MFA, Wi-Fi,

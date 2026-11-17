@@ -7,7 +7,7 @@ set -euo pipefail
 REGION="ap-southeast-1"
 BUCKET="nbu-itdesk-content-842624819932"
 PARAM="/nbu/librechat/GOOGLE_KEY"
-MODEL="gemini-3.5-flash"
+MODEL="gemini-3.5-flash-lite"
 # Public HTTPS address of the site (CloudFront). Users never talk to the server directly.
 SITE_URL="${SITE_URL:-https://d2f1g5u307k6aa.cloudfront.net}"
 # Session cookies are only sent over HTTPS.
@@ -51,6 +51,8 @@ ENDPOINTS=google
 GOOGLE_KEY=$GOOGLE_KEY
 GOOGLE_MODELS=$MODEL
 SEARCH=false
+# No extra model call per chat just to write a title (halves free-tier usage)
+TITLE_CONVO=false
 ALLOW_EMAIL_LOGIN=true
 ALLOW_REGISTRATION=$ALLOW_REGISTRATION
 ALLOW_SOCIAL_LOGIN=false

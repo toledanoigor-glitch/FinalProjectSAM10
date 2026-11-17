@@ -68,7 +68,7 @@ modelSpecs:
       default: true
       preset:
         endpoint: 'google'
-        model: 'gemini-3.5-flash'
+        model: 'gemini-3.5-flash-lite'
         modelLabel: 'Mabi'
         greeting: 'Hi, I''m Mabi from the Northbridge University IT Desk. Ask me about passwords, Wi-Fi, email, printing or the computer labs.'
         promptPrefix: |
