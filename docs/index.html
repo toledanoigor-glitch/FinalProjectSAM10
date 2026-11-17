@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Summary · Northbridge University IT Desk (Mabi)</title>
+<link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css"></head>
+<body><header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><nav><a href="index.html" class=on>Summary</a><a href="infrastructure.html">AWS design</a><a href="system.html">System card</a><a href="baseline.html">Baseline</a><a href="well-architected.html">Well-Architected</a><a href="operations.html">Monitoring, backup, security</a><a href="incident.html">Automation & incident</a><a href="results.html">Results</a><a href="next.html">Next steps</a><a href="declaration.html">Declaration</a></nav></div></header>
+<main>
+<h1>Mabi: the Northbridge University IT Desk assistant</h1>
+<p class="lead">An AI help-desk chat for a (fictional) university, built on open-source LibreChat, running on AWS, and run like a real service: watched, backed up, locked down and able to fix itself.</p>
+
+<div class="video"><iframe src="https://www.youtube.com/embed/VIDEO_ID_HERE" title="Project presentation" allowfullscreen></iframe></div>
+<p style="font-size:14px;color:var(--muted)">Recorded presentation (5–8 minutes): the reskin, the running system in AWS, the dashboard and alarms, the restore and the fault.</p>
+
+<h2>What the system does</h2>
+<p>Students and staff of Northbridge University open <a href="https://d2f1g5u307k6aa.cloudfront.net">https://d2f1g5u307k6aa.cloudfront.net</a>, log in and ask <b>Mabi</b> everyday IT questions: <i>"I forgot my password"</i>, <i>"How do I connect my phone to the Wi-Fi?"</i>, <i>"How much is a colour print?"</i>. Mabi answers in English, Filipino or Taglish, using only the IT Desk's own information. It refuses things it must not do: it never repeats a password, cannot reset accounts, and sends grade questions to the Registrar.</p>
+
+<h2>What was wrong with how it was run</h2>
+<p>The starting point was LibreChat as it comes out of the box, on a laptop. It only worked while the laptop was on. Anyone who could reach it could create an account. The AI key sat in a plain text file. Nothing recorded whether it was working, nobody would be told if it broke, and if the laptop died every conversation was gone. The first copy on AWS was no better: it was reachable over plain HTTP at a raw IP address, with the web port open to the whole internet.</p>
+
+<h2>What I changed</h2>
+<ul>
+<li><b>Made it ours:</b> new name, logo, colours, wording and safety rules; six invented IT Desk documents kept in Amazon S3.</li>
+<li><b>Put it on AWS properly:</b> one small server behind Amazon CloudFront (HTTPS), the server only accepts traffic from CloudFront, no SSH, sign-up closed, the AI key in Parameter Store.</li>
+<li><b>Watched it:</b> every question logged with its time, outcome and version; a dashboard; 9 alarms that email a real inbox.</li>
+<li><b>Backed it up:</b> nightly database backup to S3, and a restore test that brought the chats back in 43 seconds.</li>
+<li><b>Broke it on purpose and fixed it:</b> stopped the app, timed how long the alarm took to notice, wrote a runbook, then added an auto-heal job so the same fault now fixes itself.</li>
+</ul>
+
+<h2>What improved</h2>
+<div class="cards">
+<div class="card"><b>13 min 29 s → 1 min 38 s</b><span>outage when the app stops (same fault, before and after auto-heal, 2026-11-17)</span></div>
+<div class="card"><b>never → 10 min</b><span>time for someone to find out the site is down (no monitoring before; alarm email after)</span></div>
+<div class="card"><b>none → 43 s</b><span>backups: none before; nightly to S3 now, restore tested 2026-11-17</span></div>
+<div class="card"><b>9 / 10</b><span>test questions answered correctly (1 honest failure: it invented certainty)</span></div>
+</div>
+<p>The trade-off I chose: <b>reliability and operations over cost of redundancy.</b> Everything runs on one t3.small in one zone to stay on the AWS Free plan, so a whole-server failure would still take Mabi down. I accepted that and made recovery fast and tested instead. See the <a href="well-architected.html">Well-Architected review</a>.</p>
+
+<h2>Quick links</h2>
+<table>
+<tr><th>Live system</th><td><a href="https://d2f1g5u307k6aa.cloudfront.net">https://d2f1g5u307k6aa.cloudfront.net</a> (sign-up is closed; demo login on request)</td></tr>
+<tr><th>Repository</th><td><a href="https://github.com/toledanoigor-glitch/FinalProjectSAM10">https://github.com/toledanoigor-glitch/FinalProjectSAM10</a></td></tr>
+<tr><th>Base system</th><td><a href="https://github.com/danny-avila/LibreChat">LibreChat</a> v0.8.9-rc1 by Danny Avila and contributors, MIT licence</td></tr>
+<tr><th>Author</th><td>Igor Toledano (individual project)</td></tr>
+</table>
+</main>
+<footer>SAM10 Systems Administration and Maintenance · Final Project · Igor Toledano · Built on <a href="https://github.com/danny-avila/LibreChat">LibreChat</a> (MIT) · Northbridge University is fictional; all data is invented.</footer>
+<div class="zoom" id="z"><img alt=""></div>
+<script>document.querySelectorAll('figure img').forEach(i=>i.onclick=()=>{const z=document.getElementById('z');z.firstChild.src=i.src;z.style.display='flex'});document.getElementById('z').onclick=e=>e.currentTarget.style.display='none';</script>
+</body></html>

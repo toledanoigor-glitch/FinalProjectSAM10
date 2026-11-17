@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Well-Architected · Northbridge University IT Desk (Mabi)</title>
+<link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css"></head>
+<body><header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><nav><a href="index.html">Summary</a><a href="infrastructure.html">AWS design</a><a href="system.html">System card</a><a href="baseline.html">Baseline</a><a href="well-architected.html" class=on>Well-Architected</a><a href="operations.html">Monitoring, backup, security</a><a href="incident.html">Automation & incident</a><a href="results.html">Results</a><a href="next.html">Next steps</a><a href="declaration.html">Declaration</a></nav></div></header>
+<main>
+<h1>Well-Architected review</h1>
+<p class="lead">The six pillars of the AWS Well-Architected Framework, applied to Mabi as it runs now (after the incident fix, 2026-11-17). For each: what the framework asks, what Mabi does, and a verdict.</p>
+
+<h2>Operational excellence <span class="good">Good</span></h2>
+<p><b>Asks for:</b> operations as code, small reversible changes, observability, learning from failure.</p>
+<p><b>Mabi does:</b> everything is in git (branding, content, config builder, compose file, start script, ops scripts, systemd timers, the CloudShell script that creates all monitoring). One script (<code>start-mabi.sh</code>) rebuilds the config from S3 and restarts the stack. Every request is logged with outcome, duration and version. A tested runbook exists, and the one incident led to a real change (auto-heal).</p>
+<p><b>Weak spot:</b> deployment is still a manual <code>git pull</code> in Session Manager; no CI/CD.</p>
+
+<h2>Security <span class="adequate">Adequate</span></h2>
+<p><b>Asks for:</b> strong identity, least privilege, traceability, protection at every layer, data protection in transit and at rest.</p>
+<p><b>Mabi does:</b> root has MFA and is not used; daily work is an IAM user with MFA that switches into an admin role; the server has its own narrow role; the API key is a SecureString; CloudTrail logs all regions; no SSH; the server only accepts CloudFront; HTTPS for users; sign-up closed.</p>
+<p><b>Gaps:</b> no AWS WAF, so the login page and model quota have no rate limit; CloudFront to server is plain HTTP inside AWS; MongoDB has no password (it is reachable only from the Docker network); EBS encryption not confirmed.</p>
+
+<h2>Reliability <span class="adequate">Adequate</span></h2>
+<p><b>Asks for:</b> automatic recovery, tested recovery, scaling, knowing when something fails.</p>
+<p><b>Mabi does:</b> 9 alarms to email; external health check every 5 minutes; auto-heal every minute; Docker <code>restart: always</code>; nightly backups to S3 with a 14-day lifecycle; restore tested (RTO 43 s); faults written up.</p>
+<p><b>Gaps:</b> a single instance in a single Availability Zone is a single point of failure; RPO is 24 hours; rebuilding a whole lost server is written down but not rehearsed; the free model tier rate-limits (HTTP 429) under steady use.</p>
+
+<h2>Performance efficiency <span class="adequate">Adequate</span></h2>
+<p><b>Asks for:</b> right-sized resources, measuring performance, using managed services where they help.</p>
+<p><b>Mabi does:</b> t3.small (2 vCPU, 2 GiB) with 2 GB swap. On 2026-11-17 memory was about 52% and disk about 56% used, with CPU low. Logged answers took 1.1 to 7.7 seconds. CloudFront serves the static files from the edge. An alarm fires if average answer time exceeds 20 s.</p>
+<p><b>Gap:</b> the bottleneck is the external model's free-tier rate limit, not AWS; there is no load test, so the safe number of users is unknown.</p>
+
+<h2>Cost optimization <span class="good">Good</span></h2>
+<p><b>Asks for:</b> pay only for what you use, measure spend, set guardrails.</p>
+<p><b>Mabi does:</b> AWS Free plan; one small instance; a $1 monthly budget that emails above $0.01; CloudWatch kept inside its free allowance on purpose (10 custom metrics, 9 alarms, 1 dashboard); log retention 14–30 days instead of "never expire"; S3 backups expire after 14 days; the model is free.</p>
+<p><b>Gap:</b> resources are not consistently tagged for cost allocation, and the server runs at night when nobody uses it.</p>
+
+<h2>Sustainability <span class="adequate">Adequate</span></h2>
+<p><b>Asks for:</b> the smallest footprint that meets the need.</p>
+<p><b>Mabi does:</b> one small burstable instance, no idle extras, old backups and logs deleted automatically, caching static files at the edge.</p>
+<p><b>Gap:</b> it runs 24/7; a schedule that stops it overnight would cut its energy use by about a third.</p>
+
+<h2>Trade-off and the gap I would fix first</h2>
+<p><b>Optimised for:</b> operational excellence and reliability-through-recovery (watch it, back it up, fix fast). <b>Deliberately accepted as weaker:</b> reliability-through-redundancy, because a second server or a managed database would leave the Free plan for a help desk with a handful of test users.</p>
+<p><b>Gap ranked first: no AWS WAF in front of CloudFront (Security).</b> The login page and the chat API are open to the whole internet with no rate limit. One script could guess passwords or burn the free Gemini quota, which would take Mabi down for everyone (we already saw 429 errors with one human tester). A WAF web ACL with the AWS managed common rules and a rate-based rule on <code>/api/auth/login</code> and <code>/api/ask</code> is a few clicks on the existing distribution, costs a few dollars a month, and protects security <i>and</i> availability at once. That beats the alternatives on value: Multi-AZ would cost far more, and the other security gaps (internal HTTP, Mongo without password) can only be reached by someone already inside the server.</p>
+</main>
+<footer>SAM10 Systems Administration and Maintenance · Final Project · Igor Toledano · Built on <a href="https://github.com/danny-avila/LibreChat">LibreChat</a> (MIT) · Northbridge University is fictional; all data is invented.</footer>
+<div class="zoom" id="z"><img alt=""></div>
+<script>document.querySelectorAll('figure img').forEach(i=>i.onclick=()=>{const z=document.getElementById('z');z.firstChild.src=i.src;z.style.display='flex'});document.getElementById('z').onclick=e=>e.currentTarget.style.display='none';</script>
+</body></html>

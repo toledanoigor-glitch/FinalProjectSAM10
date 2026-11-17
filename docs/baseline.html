@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Baseline · Northbridge University IT Desk (Mabi)</title>
+<link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css"></head>
+<body><header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><nav><a href="index.html">Summary</a><a href="infrastructure.html">AWS design</a><a href="system.html">System card</a><a href="baseline.html" class=on>Baseline</a><a href="well-architected.html">Well-Architected</a><a href="operations.html">Monitoring, backup, security</a><a href="incident.html">Automation & incident</a><a href="results.html">Results</a><a href="next.html">Next steps</a><a href="declaration.html">Declaration</a></nav></div></header>
+<main>
+<h1>Baseline: the environment before I touched it</h1>
+<p class="lead">What "running LibreChat" looked like at the start, so the improvements have something honest to be measured against.</p>
+
+<h2>Stage 0: stock LibreChat on a laptop (2026-11-16)</h2>
+<figure><img src="img/original-librechat.png" alt="Stock LibreChat on http://localhost:3080, any model, any topic." loading="lazy"><figcaption>Stock LibreChat on http://localhost:3080, any model, any topic.</figcaption></figure>
+<table>
+<tr><th>Area</th><th>Baseline</th></tr>
+<tr><td>Availability</td><td>Only while the laptop was on and Docker Desktop running; only reachable from that laptop</td></tr>
+<tr><td>Access</td><td>Anyone who reached it could <b>create an account</b>; email login, no MFA</td></tr>
+<tr><td>Secrets</td><td>Gemini API key in plain text in <code>.env</code>, next to the code</td></tr>
+<tr><td>Transport</td><td>Plain HTTP</td></tr>
+<tr><td>Monitoring</td><td>None. No request log, no metrics, no alarms. A failure was found only by trying it</td></tr>
+<tr><td>Logs</td><td>Container logs on the laptop only, no retention policy</td></tr>
+<tr><td>Backups</td><td>None. Conversations lived only in a Docker folder on one laptop disk</td></tr>
+<tr><td>Data and wording</td><td>No content of its own; a general assistant with no rules</td></tr>
+<tr><td>Cost</td><td>$0 (own laptop, free model tier)</td></tr>
+</table>
+
+<h2>Stage 1: first copy on AWS (2026-11-17, before hardening)</h2>
+<p>The first deployment worked, but it copied the laptop's habits onto the internet:</p>
+<div class="grid2">
+<figure><img src="img/mabi-on-aws.png" alt="First AWS version: <b>&quot;Not secure&quot;</b>, plain HTTP to the raw public IP of the server." loading="lazy"><figcaption>First AWS version: <b>&quot;Not secure&quot;</b>, plain HTTP to the raw public IP of the server.</figcaption></figure>
+<figure><img src="img/sg-before-open-to-internet.png" alt="Security group before: port 80 open to <code>0.0.0.0/0</code>, the whole internet." loading="lazy"><figcaption>Security group before: port 80 open to <code>0.0.0.0/0</code>, the whole internet.</figcaption></figure>
+</div>
+<ul>
+<li>HTTP only, at a raw IP address. Passwords crossed the internet unencrypted.</li>
+<li>Web port open to every address on the internet, so CloudFront could be bypassed.</li>
+<li>Sign-up still open: anyone finding the IP could make an account and spend the model quota.</li>
+<li>Still no monitoring, alarms, backups or request log.</li>
+</ul>
+<p>The <a href="operations.html">Monitoring, backup and security</a> page shows what replaced each of these, and the <a href="results.html">Results</a> page puts the numbers side by side.</p>
+</main>
+<footer>SAM10 Systems Administration and Maintenance · Final Project · Igor Toledano · Built on <a href="https://github.com/danny-avila/LibreChat">LibreChat</a> (MIT) · Northbridge University is fictional; all data is invented.</footer>
+<div class="zoom" id="z"><img alt=""></div>
+<script>document.querySelectorAll('figure img').forEach(i=>i.onclick=()=>{const z=document.getElementById('z');z.firstChild.src=i.src;z.style.display='flex'});document.getElementById('z').onclick=e=>e.currentTarget.style.display='none';</script>
+</body></html>

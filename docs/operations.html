@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monitoring, backup, security · Northbridge University IT Desk (Mabi)</title>
+<link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css"></head>
+<body><header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><nav><a href="index.html">Summary</a><a href="infrastructure.html">AWS design</a><a href="system.html">System card</a><a href="baseline.html">Baseline</a><a href="well-architected.html">Well-Architected</a><a href="operations.html" class=on>Monitoring, backup, security</a><a href="incident.html">Automation & incident</a><a href="results.html">Results</a><a href="next.html">Next steps</a><a href="declaration.html">Declaration</a></nav></div></header>
+<main>
+<h1>Monitoring, backup and restore, and security</h1>
+
+<h2>Monitoring</h2>
+<p>Three sources feed one CloudWatch dashboard, <code>Mabi-Operations</code>: EC2's own metrics (CPU, status), the container logs (shipped by Docker's <code>awslogs</code> driver), and my own metrics in the namespace <code>NBU/Mabi</code>. A small job (<code>request_metrics.py</code>, every minute) reads new answers from MongoDB and publishes requests, successes, failures, empty answers, response time, disk and memory use. A Lambda function checks the public site every 5 minutes.</p>
+<figure><img src="img/dashboard.png" alt="Dashboard Mabi-Operations with real data, 2026-11-17 (E-06): requests, answers OK/failed, response time, CPU, disk, memory, health check, backups, alarm status." loading="lazy"><figcaption>Dashboard Mabi-Operations with real data, 2026-11-17 (E-06): requests, answers OK/failed, response time, CPU, disk, memory, health check, backups, alarm status.</figcaption></figure>
+
+<h3>Every request is logged</h3>
+<p>Each question is written as one JSON line to the log group <code>/nbu/mabi/requests</code>: the question, when it was asked, how long the answer took, whether it succeeded, the model and the exact version (<code>librechat-v0.8.9-rc1+nbu-&lt;git commit&gt;</code>).</p>
+<figure><img src="img/request-log.png" alt="Request log sample (E-09): three questions, all ok, 1.1 to 7.7 seconds, model gemini-3.5-flash-lite, version librechat-v0.8.9-rc1+nbu-4b2eea4." loading="lazy"><figcaption>Request log sample (E-09): three questions, all ok, 1.1 to 7.7 seconds, model gemini-3.5-flash-lite, version librechat-v0.8.9-rc1+nbu-4b2eea4.</figcaption></figure>
+<table>
+<tr><th>Log group</th><th>What</th><th>Retention</th></tr>
+<tr><td><code>/nbu/mabi/app</code></td><td>LibreChat container output</td><td>14 days</td></tr>
+<tr><td><code>/nbu/mabi/database</code></td><td>MongoDB container output</td><td>14 days</td></tr>
+<tr><td><code>/nbu/mabi/requests</code></td><td>One line per question (above)</td><td>30 days</td></tr>
+<tr><td><code>/nbu/ops/backups</code></td><td>One line per backup</td><td>30 days</td></tr>
+<tr><td><code>/aws/lambda/nbu-healthcheck</code></td><td>Health check runs</td><td>14 days</td></tr>
+</table>
+
+<h3>Nine alarms, all emailing a real inbox</h3>
+<table><tr><th>Alarm</th><th>Fires when</th><th>Why this threshold</th></tr><tr><td><code>nbu-site-down</code></td><td>HealthCheckOK &lt; 1, 2 of 2 × 5 min; missing data = breaching</td><td>Users cannot reach Mabi; the most important alarm</td></tr><tr><td><code>nbu-status-check-failed</code></td><td>EC2 StatusCheckFailed &gt; 0, 2 × 1 min</td><td>The server itself is broken (hardware/OS); reboot needed</td></tr><tr><td><code>nbu-cpu-high</code></td><td>CPUUtilization &gt; 85%, 2 × 5 min</td><td>t3 credits run out under sustained load; answers slow down</td></tr><tr><td><code>nbu-memory-high</code></td><td>MemoryUsedPercent &gt; 90%, 5 min</td><td>Node + MongoDB on 2 GiB; above 90% the kernel may kill one</td></tr><tr><td><code>nbu-disk-high</code></td><td>DiskUsedPercent &gt; 85%, 5 min</td><td>A full disk stops MongoDB writing; leaves time to clean up</td></tr><tr><td><code>nbu-answers-failed</code></td><td>AnswersFailed ≥ 3 in 15 min</td><td>The model is failing (429/503, bad key), not just one blip</td></tr><tr><td><code>nbu-empty-answer</code></td><td>EmptyAnswers &gt; 0 in 30 min</td><td>An empty reply means something broke silently</td></tr><tr><td><code>nbu-slow-answers</code></td><td>ResponseTimeMs average &gt; 20,000 over 10 min</td><td>Normal answers take 1–8 s; 20 s means users give up</td></tr><tr><td><code>nbu-backup-missing</code></td><td>BackupSuccess &lt; 1 in 1 day; missing = breaching</td><td>The nightly backup did not run or failed</td></tr></table>
+<p>Every alarm sends both ALARM and OK to the SNS topic <code>nbu-alerts</code>, so the admin also learns when a problem has cleared.</p>
+<div class="grid2">
+<figure><img src="img/alarms.png" alt="All 9 alarms, actions enabled, with their conditions (E-07)." loading="lazy"><figcaption>All 9 alarms, actions enabled, with their conditions (E-07).</figcaption></figure>
+<figure><img src="img/fault-alarm-email.png" alt="A real alert received (E-08): ALARM nbu-site-down, Tuesday 17 November 2026 09:39:26 UTC, during incident 001." loading="lazy"><figcaption>A real alert received (E-08): ALARM nbu-site-down, Tuesday 17 November 2026 09:39:26 UTC, during incident 001.</figcaption></figure>
+</div>
+<figure><img src="img/monitoring-created.png" alt="All log groups, the SNS topic, the Lambda and the alarms were created by one script from the repository (create-aws-monitoring.sh), run in CloudShell. Email address blacked out." loading="lazy"><figcaption>All log groups, the SNS topic, the Lambda and the alarms were created by one script from the repository (create-aws-monitoring.sh), run in CloudShell. Email address blacked out.</figcaption></figure>
+
+<h2>Backup and restore</h2>
+<h3>What would be lost, and how each part is protected</h3>
+<table>
+<tr><th>What</th><th>Where it lives</th><th>Protection</th><th>Restored by</th></tr>
+<tr><td>Chats, users, settings (MongoDB)</td><td>EC2 disk</td><td><code>mongodump</code> every night 02:00 Manila → S3 <code>backups/mongodb/</code> (3 copies kept on the server, 14 days in S3)</td><td><code>restore-mongo.sh</code></td></tr>
+<tr><td>IT Desk knowledge</td><td>S3 <code>content/</code> + git</td><td>S3 versioning; copy in git</td><td>Re-upload, or an older S3 version</td></tr>
+<tr><td>Config and scripts</td><td>git (GitHub)</td><td>Full history; the live config is regenerated from S3 at every start</td><td><code>git clone</code> + <code>start-mabi.sh</code></td></tr>
+<tr><td>Gemini API key</td><td>Parameter Store</td><td>Managed by AWS, never on the laptop or in git</td><td>Read again at start</td></tr>
+<tr><td>Session secrets</td><td>Server, <code>secrets.env</code> (mode 600)</td><td>Not backed up on purpose: if lost, new ones are made and users just log in again</td><td><code>start-mabi.sh</code></td></tr>
+<tr><td>Uploaded files</td><td>Server <code>uploads/</code></td><td><b>Not backed up</b>: Mabi does not use file uploads (known gap)</td><td>n/a</td></tr>
+</table>
+<div class="grid2">
+<figure><img src="img/timers-installed.png" alt="Backup settings (E-10): the backup and request-logger timers installed; first backup ok, 25,150 bytes." loading="lazy"><figcaption>Backup settings (E-10): the backup and request-logger timers installed; first backup ok, 25,150 bytes.</figcaption></figure>
+<figure><img src="img/backup-manual.png" alt="A backup run: mongodump → S3, status ok, 27,192 bytes in 1.0 s (09:18:18 UTC)." loading="lazy"><figcaption>A backup run: mongodump → S3, status ok, 27,192 bytes in 1.0 s (09:18:18 UTC).</figcaption></figure>
+</div>
+
+<h3>Restore test, 2026-11-17 (E-11)</h3>
+<p>To prove the backup is real, I took a backup at 09:18, then asked Mabi a <b>new</b> question (the Wi-Fi question) so the live database had one chat the backup did not. Then I ran <code>restore-mongo.sh</code>: it downloads the newest backup from S3, counts records, stops the stack, moves the live database aside (not deleted), restores into an empty MongoDB, counts again and restarts Mabi.</p>
+<table>
+<tr><th></th><th>Users</th><th>Conversations</th><th>Messages</th></tr>
+<tr><td>Before restore (live)</td><td>1</td><td>7</td><td>18</td></tr>
+<tr><td>After restore (09:18 backup)</td><td>1</td><td>6</td><td>16</td></tr>
+</table>
+<p>93 documents restored, 0 failed; the site answered <code>HTTP/1.1 200 OK</code>; <b>restore finished in 43 seconds</b>. In the browser the old chats were back and the Wi-Fi chat was gone, which is exactly the one conversation (2 messages) created after the backup.</p>
+<div class="grid2">
+<figure><img src="img/restore-counts-before.png" alt="Restore step 1–4: backup downloaded from S3, counts before (7 conversations, 18 messages), live data moved aside." loading="lazy"><figcaption>Restore step 1–4: backup downloaded from S3, counts before (7 conversations, 18 messages), live data moved aside.</figcaption></figure>
+<figure><img src="img/restore-output.png" alt="Restore step 5–6: 93 documents restored, counts after (6 / 16), Mabi started, 200 OK, finished in 43 seconds." loading="lazy"><figcaption>Restore step 5–6: 93 documents restored, counts after (6 / 16), Mabi started, 200 OK, finished in 43 seconds.</figcaption></figure>
+</div>
+<figure><img src="img/restore-chats-back.png" alt="Check that the data came back: logged in after the restore, six chats present, an old chat opens with its answer." loading="lazy"><figcaption>Check that the data came back: logged in after the restore, six chats present, an old chat opens with its answer.</figcaption></figure>
+<table>
+<tr><th></th><th>Target</th><th>Measured</th></tr>
+<tr><td><b>RPO</b> (data we can lose)</td><td>24 hours: one backup a night is enough for an FAQ chat; nobody's work depends on chat history</td><td>Lost exactly the chats made after the last backup (1 conversation)</td></tr>
+<tr><td><b>RTO</b> (time to get it back)</td><td>15 minutes</td><td><b>43 seconds</b> for the database, plus logging in</td></tr>
+</table>
+<p>Not yet rehearsed: rebuilding a completely lost server (new EC2 → clone repo → <code>setup-server.sh</code> → <code>start-mabi.sh</code> → restore), estimated 20–30 minutes. Full procedure: <a href="https://github.com/toledanoigor-glitch/FinalProjectSAM10/blob/main/docs/backup-restore.md">docs/backup-restore.md</a>.</p>
+
+<h2>Security</h2>
+<h3>Each control in one sentence</h3>
+<table>
+<tr><th>Control</th><th>What it does</th></tr>
+<tr><td>MFA on root, root not used</td><td>The account owner login needs a phone code and is kept for emergencies, so a stolen password alone cannot take the account.</td></tr>
+<tr><td>IAM user <code>igor</code> + MFA → role <code>NBU-Admin</code></td><td>Daily work uses a personal read-only login that must deliberately switch into the admin role, so there is no shared admin login and every admin action is attributable.</td></tr>
+<tr><td>Instance role <code>NBU-EC2-Role</code></td><td>The server gets short-lived credentials for only what it needs (S3 bucket, one parameter, logs, Session Manager), so no access keys are stored on it.</td></tr>
+<tr><td>Parameter Store SecureString</td><td>The Gemini key is encrypted in AWS and read at start-up, so it is not in the code, the image, git history or a screenshot.</td></tr>
+<tr><td>Security group: CloudFront prefix list only</td><td>The server refuses any connection that does not come through CloudFront, so it cannot be attacked directly by IP.</td></tr>
+<tr><td>HTTPS via CloudFront</td><td>Passwords and chats are encrypted between the user and AWS, and plain HTTP is redirected.</td></tr>
+<tr><td>No SSH; Session Manager</td><td>There is no port 22 and no key file to lose; admin shells go through IAM and are logged.</td></tr>
+<tr><td>Database not exposed</td><td>MongoDB has no published port, so it is reachable only by the app container on the same Docker network.</td></tr>
+<tr><td>Sign-up closed, social login and password reset off</td><td>Only accounts the admin creates exist, which protects the free model quota and limits who can reach the chat.</td></tr>
+<tr><td>CloudTrail <code>nbu-trail</code> (all regions)</td><td>Every API call in the account is recorded, so changes can be traced to a person and a time.</td></tr>
+<tr><td><code>.gitignore</code> + <code>.env</code> mode 600</td><td>Secrets files never enter git and only root can read them on the server.</td></tr>
+<tr><td>Budget alert</td><td>An email arrives if anything starts costing money, which also catches a hijacked account.</td></tr>
+</table>
+<div class="grid2">
+<figure><img src="img/mfa.png" alt="MFA on the root user (E-12)." loading="lazy"><figcaption>MFA on the root user (E-12).</figcaption></figure>
+<figure><img src="img/iam-user-igor.png" alt="IAM user igor: console access enabled with MFA; only ReadOnlyAccess, change-own-password and permission to switch to the admin role (E-12)." loading="lazy"><figcaption>IAM user igor: console access enabled with MFA; only ReadOnlyAccess, change-own-password and permission to switch to the admin role (E-12).</figcaption></figure>
+<figure><img src="img/parameter-store.png" alt="The Gemini key as a SecureString in Parameter Store; its value is never shown (E-13)." loading="lazy"><figcaption>The Gemini key as a SecureString in Parameter Store; its value is never shown (E-13).</figcaption></figure>
+<figure><img src="img/ec2-role.png" alt="The server's own role: Session Manager, CloudWatch agent and one inline policy for its bucket and parameter." loading="lazy"><figcaption>The server's own role: Session Manager, CloudWatch agent and one inline policy for its bucket and parameter.</figcaption></figure>
+<figure><img src="img/sg-after-cloudfront-only.png" alt="Security group after: port 80 only from the CloudFront prefix list pl-31a34658." loading="lazy"><figcaption>Security group after: port 80 only from the CloudFront prefix list pl-31a34658.</figcaption></figure>
+<figure><img src="img/cloudtrail-logging.png" alt="CloudTrail nbu-trail: multi-region, logging." loading="lazy"><figcaption>CloudTrail nbu-trail: multi-region, logging.</figcaption></figure>
+</div>
+
+<h3>Security problems found and fixed: before and after</h3>
+<table>
+<tr><th>Problem found</th><th>Before</th><th>After</th></tr>
+<tr><td>Plain HTTP</td><td>http://18.138.237.86 "Not secure"</td><td>HTTPS at CloudFront, HTTP redirected</td></tr>
+<tr><td>Server open to the internet</td><td>Port 80 from 0.0.0.0/0</td><td>Port 80 from CloudFront prefix list only</td></tr>
+<tr><td>Anyone could register</td><td>Sign-up open</td><td>Sign-up closed (<code>ALLOW_REGISTRATION=false</code>)</td></tr>
+<tr><td>Key in a text file</td><td>Laptop <code>.env</code></td><td>Parameter Store SecureString, read at start</td></tr>
+<tr><td>Admin logins</td><td>Root account for everything</td><td>Root with MFA, unused; personal user + MFA + role</td></tr>
+<tr><td>Remote access</td><td>SSH would need port 22 and a key file</td><td>No SSH; Session Manager</td></tr>
+<tr><td>No audit trail</td><td>Nothing recorded</td><td>CloudTrail in all regions</td></tr>
+</table>
+<figure><img src="img/login-signup-closed.png" alt="The login page on AWS: no sign-up link, no social login." loading="lazy"><figcaption>The login page on AWS: no sign-up link, no social login.</figcaption></figure>
+
+<h3>Personal data check</h3>
+<ul>
+<li>Content: all invented (fictional university, <code>.example</code> domains). No real names, IDs, phone numbers or addresses.</li>
+<li>Users: only test accounts created by me. The password in test question 8 ("Summer2026!") is invented for the test.</li>
+<li>Screenshots on this site: checked for keys, tokens and passwords; my personal email was blacked out in three of them.</li>
+<li>Git history: no <code>.env</code>, key or password has ever been committed (<code>.gitignore</code> from the first commit).</li>
+<li>Sent outside AWS: only invented questions and content, to Google Gemini.</li>
+</ul>
+</main>
+<footer>SAM10 Systems Administration and Maintenance · Final Project · Igor Toledano · Built on <a href="https://github.com/danny-avila/LibreChat">LibreChat</a> (MIT) · Northbridge University is fictional; all data is invented.</footer>
+<div class="zoom" id="z"><img alt=""></div>
+<script>document.querySelectorAll('figure img').forEach(i=>i.onclick=()=>{const z=document.getElementById('z');z.firstChild.src=i.src;z.style.display='flex'});document.getElementById('z').onclick=e=>e.currentTarget.style.display='none';</script>
+</body></html>

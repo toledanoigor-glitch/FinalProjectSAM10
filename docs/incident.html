@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Automation & incident · Northbridge University IT Desk (Mabi)</title>
+<link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css"></head>
+<body><header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><nav><a href="index.html">Summary</a><a href="infrastructure.html">AWS design</a><a href="system.html">System card</a><a href="baseline.html">Baseline</a><a href="well-architected.html">Well-Architected</a><a href="operations.html">Monitoring, backup, security</a><a href="incident.html" class=on>Automation & incident</a><a href="results.html">Results</a><a href="next.html">Next steps</a><a href="declaration.html">Declaration</a></nav></div></header>
+<main>
+<h1>Automation, and the incident</h1>
+
+<h2>Automations that run on their own</h2>
+<table>
+<tr><th>Automation</th><th>Runs</th><th>What it does</th><th>Code</th></tr>
+<tr><td><b>Health check</b> (Lambda <code>nbu-healthcheck</code>)</td><td>Every 5 min, EventBridge</td><td>Visits the public <code>/health</code> through CloudFront and publishes HealthCheckOK and latency; feeds <code>nbu-site-down</code></td><td><code>deploy/aws/ops/healthcheck_lambda.py</code></td></tr>
+<tr><td><b>Request logger</b> (systemd timer)</td><td>Every 1 min</td><td>Logs every new question with outcome, duration and version; publishes 7 custom metrics</td><td><code>deploy/aws/ops/request_metrics.py</code></td></tr>
+<tr><td><b>Nightly backup</b> (systemd timer)</td><td>02:00 Manila (18:00 UTC)</td><td><code>mongodump</code> → S3, logs the result, publishes BackupSuccess</td><td><code>deploy/aws/ops/backup_mongo.py</code></td></tr>
+<tr><td><b>Auto-heal</b> (systemd timer, added after incident 001)</td><td>Every 1 min</td><td>If <code>/health</code> fails twice in a row, starts the containers again</td><td><code>deploy/aws/ops/autoheal.sh</code></td></tr>
+</table>
+<p>All of it is installed by <code>install-ops.sh</code> and <code>create-aws-monitoring.sh</code> from the <a href="https://github.com/toledanoigor-glitch/FinalProjectSAM10">repository</a>; the README explains how to deploy them.</p>
+<figure><img src="img/automation-runs.png" alt="E-14: the request logger and auto-heal running unattended every minute, 09:46 to 09:52 UTC on 2026-11-17, each 'Deactivated successfully'. The health-check Lambda has run every 5 minutes since 09:04 (see the dashboard's health-check graph)." loading="lazy"><figcaption>E-14: the request logger and auto-heal running unattended every minute, 09:46 to 09:52 UTC on 2026-11-17, each 'Deactivated successfully'. The health-check Lambda has run every 5 minutes since 09:04 (see the dashboard's health-check graph).</figcaption></figure>
+
+<h2>Incident 001: Mabi site down (container stopped)</h2>
+<p><b>Date:</b> 2026-11-17 · <b>Severity:</b> whole service down · <b>Status:</b> resolved; prevention in place and tested. The fault was created on purpose (the brief allows this) to test whether monitoring would catch it and whether the runbook works.</p>
+
+<h3>Timeline (UTC; Manila is UTC+8)</h3>
+<table>
+<tr><th>Time</th><th>What happened</th></tr>
+<tr><td>09:29:12</td><td>LibreChat container stopped (<code>docker stop LibreChat</code>); logs: <code>Graceful shutdown complete, exiting</code></td></tr>
+<tr><td>~09:30</td><td>Users get <code>504 Gateway Timeout ERROR</code> from CloudFront</td></tr>
+<tr><td>09:34:00</td><td>Second failed health check in a row (periods 09:29 and 09:34)</td></tr>
+<tr><td><b>09:39:26</b></td><td><b>Alarm nbu-site-down → ALARM, email received</b></td></tr>
+<tr><td>09:41:51</td><td>Admin follows the runbook: <code>docker compose ps -a</code> → <code>LibreChat Exited (0) 12 minutes ago</code>, MongoDB still up</td></tr>
+<tr><td>09:42</td><td><code>docker logs -n 5 LibreChat</code>: clean shutdown, no crash → <code>docker compose up -d</code></td></tr>
+<tr><td><b>09:42:41</b></td><td><b><code>curl /health</code> → HTTP/1.1 200 OK. Fixed</b></td></tr>
+<tr><td>09:44:26</td><td>Alarm back to OK, OK email received</td></tr>
+</table>
+<div class="cards">
+<div class="card"><b>10 min 14 s</b><span>time to detect (fault → alarm)</span></div>
+<div class="card"><b>3 min 15 s</b><span>time to fix (alarm → fixed)</span></div>
+<div class="card"><b>13 min 29 s</b><span>total outage</span></div>
+<div class="card"><b>0</b><span>chats lost (database stayed up)</span></div>
+</div>
+<div class="grid2">
+<figure><img src="img/fault-site-down.png" alt="What users saw: CloudFront 504 Gateway Timeout." loading="lazy"><figcaption>What users saw: CloudFront 504 Gateway Timeout.</figcaption></figure>
+<figure><img src="img/fault-alarm-email.png" alt="The alarm email, 09:39:26 UTC." loading="lazy"><figcaption>The alarm email, 09:39:26 UTC.</figcaption></figure>
+</div>
+<figure><img src="img/fault-fix.png" alt="E-15: the investigation and fix, as typed: the stop at 09:29:12, ps showing Exited (0), logs showing a clean shutdown, compose up, 200 OK at 09:42:41." loading="lazy"><figcaption>E-15: the investigation and fix, as typed: the stop at 09:29:12, ps showing Exited (0), logs showing a clean shutdown, compose up, 200 OK at 09:42:41.</figcaption></figure>
+<figure><img src="img/fault-ok-email.png" alt="The OK email: nbu-site-down back to OK at 09:44:26 UTC." loading="lazy"><figcaption>The OK email: nbu-site-down back to OK at 09:44:26 UTC.</figcaption></figure>
+
+<h3>Root cause</h3>
+<p>The app container received a stop signal and exited cleanly (exit code 0), the same as an admin stopping it by mistake or an update leaving it stopped. <b>It stayed down because</b> Docker's <code>restart: always</code> deliberately does not restart a container that was stopped with <code>docker stop</code> (it only covers crashes and reboots), and nothing on the server checked whether the app was answering. The only check was the external health check, which is designed to alert a human after 2 failures 5 minutes apart. So the site stayed down until a person read the email and logged in.</p>
+<p><i>Chain: container stopped → restart policy does not apply to a manual stop → no local watchdog → only an email to a human → 13½ minutes of 504s.</i></p>
+
+<h3>Prevention: auto-heal, and proof it works</h3>
+<p>New automation <code>autoheal.sh</code>, run every minute: it checks <code>http://localhost/health</code> on the server; after <b>2 failures in a row</b> (so one slow answer does not trigger it) it runs <code>docker compose up -d</code> and logs the result to <code>/var/log/nbu/autoheal.log</code>. It pauses while a restore is running so it never fights planned maintenance. The CloudWatch alarm stays as the second line: if a restart does not fix it, a human is still emailed.</p>
+<p>Then I repeated <b>exactly the same fault</b>:</p>
+<table>
+<tr><th>Time (UTC)</th><th>Event (from autoheal.log)</th></tr>
+<tr><td>09:47:25</td><td><code>docker stop LibreChat</code> (same fault)</td></tr>
+<tr><td>09:47:48</td><td>health-failed, fails 1</td></tr>
+<tr><td>09:48:53</td><td>health-failed, fails 2</td></tr>
+<tr><td><b>09:49:03</b></td><td><b>restarted, container_was "Exited (0) About a minute ago", result recovered</b></td></tr>
+</table>
+<div class="grid2">
+<figure><img src="img/autoheal-installed.png" alt="Auto-heal installed from git: three nbu- timers, auto-heal running every minute." loading="lazy"><figcaption>Auto-heal installed from git: three nbu- timers, auto-heal running every minute.</figcaption></figure>
+<figure><img src="img/autoheal-proof.png" alt="Proof: the same fault fixed itself in 1 min 38 s with nobody touching the server." loading="lazy"><figcaption>Proof: the same fault fixed itself in 1 min 38 s with nobody touching the server.</figcaption></figure>
+</div>
+<p><b>Lessons:</b> <code>restart: always</code> is not a watchdog. A local check that acts beats an alert that waits for a person, and the alarm should be for problems a restart cannot fix. Pasting long commands into Session Manager can cut them (<code>--tail</code> broke), so the runbook now uses short, one-line commands.</p>
+<p><b>Two earlier real faults during the build</b> (no monitoring existed yet, so no timings): an <code>EACCES</code> crash loop because the app runs as uid 1000 but Docker created its log folder as root (fixed: the start script now sets owners); and "Deployment config unavailable" because the generated config was mode 600 (fixed: the start script sets 644). Both are rows in the runbook's diagnosis table.</p>
+
+<h2>RUNBOOK: Mabi site is down (alarm <code>nbu-site-down</code>)</h2>
+<p><b>Owner:</b> Igor Toledano · <b>Last tested:</b> 2026-11-17 (incident 001) · <b>Takes:</b> about 5 minutes · <b>Ask:</b> Igor Toledano</p>
+<h3>1. What this is for</h3>
+<p>Getting the Mabi chat site back when users get an error page instead of the chat.</p>
+<h3>2. How you know you need it</h3>
+<p>Email <b>ALARM: "nbu-site-down"</b> (2 failed health checks, 5 minutes apart), or a user reports <code>504 Gateway Timeout ERROR</code>. Normally auto-heal fixes a stopped app within about 2 minutes, so if you got this email a restart was not enough. Look carefully.</p>
+<p>Command that shows the problem (EC2 → <code>nbu-itdesk-server</code> → Connect → Session Manager), one line at a time:</p>
+<pre><code>date -u; cd /opt/nbu/deploy/aws; sudo docker compose ps -a
+sudo docker logs -n 5 LibreChat
+sudo tail -5 /var/log/nbu/autoheal.log; df -h / ; free -m</code></pre>
+<h3>3. What it affects</h3>
+<p>Everyone: no student or staff member can open Mabi. Saved chats are safe in MongoDB.</p>
+<h3>4. How to do it</h3>
+<p><b>Step 1.</b> CloudWatch → Alarms: is <code>nbu-status-check-failed</code> also red? → <b>Yes</b>: EC2 → Instance state → Reboot, wait 3 minutes, go to 5 (Docker starts both containers itself). <b>No</b>: step 2.</p>
+<p><b>Step 2.</b> Read the output of the commands above and match it:</p>
+<table>
+<tr><th>You see</th><th>Cause</th><th>Do</th></tr>
+<tr><td>LibreChat <b>Exited</b>, logs end normally</td><td>Container stopped</td><td>Step 3</td></tr>
+<tr><td>LibreChat <b>Restarting</b>, logs show <code>EACCES … /app/logs</code></td><td>Folder owner wrong (app is uid 1000)</td><td>Step 4</td></tr>
+<tr><td>Logs show <code>Deployment config unavailable</code></td><td>Generated config not readable</td><td>Step 4</td></tr>
+<tr><td>Disk <code>Use%</code> at 100%</td><td>Logs, backups or images filled the disk</td><td>Step 5, then 3</td></tr>
+<tr><td>autoheal.log says <code>still-down</code></td><td>App crashes on start</td><td>Step 4</td></tr>
+</table>
+<p><b>Step 3. Start it again.</b> → you should see <code>HTTP/1.1 200 OK</code>.</p>
+<pre><code>sudo docker compose up -d
+sleep 15; curl -sI http://localhost/health | head -1; date -u</code></pre>
+<p><b>Step 4. Rebuild config and fix owners.</b> → both containers <code>Started</code>; then the <code>curl</code> line from step 3.</p>
+<pre><code>sudo bash /opt/nbu/deploy/aws/start-mabi.sh</code></pre>
+<p><b>Step 5. Free disk space.</b> → <code>df -h /</code> well under 85%.</p>
+<pre><code>sudo du -xh / --max-depth=2 | sort -h | tail -15
+sudo docker system prune -f</code></pre>
+<h3>5. How to check it worked</h3>
+<ul>
+<li>☐ <code>curl -sI http://localhost/health</code> gives 200 OK, and the site loads in a private window</li>
+<li>☐ Log in and ask <i>"What time is the IT Desk open on Saturday?"</i> → "8:00 AM to 12:00 NN"</li>
+<li>☐ <b>OK: "nbu-site-down"</b> email arrives, and no new alarms for 10 minutes</li>
+</ul>
+<h3>6. How to undo it</h3>
+<p>Steps 3 and 4 only start things. If <code>start-mabi.sh</code> broke the config: <code>cd /opt/nbu &amp;&amp; git log --oneline -3</code>, <code>git checkout &lt;last good commit&gt;</code>, run it again. <code>docker system prune</code> only removes stopped containers and unused images; <code>start-mabi.sh</code> rebuilds the app image.</p>
+<h3>7. Gotchas</h3>
+<ul>
+<li><code>docker stop</code> beats <code>restart: always</code>. That is why auto-heal exists.</li>
+<li>The alarm takes about 10 minutes on purpose. If a user already told you, do not wait for the email.</li>
+<li>A CloudFront 504 means the server behind it is not answering, not that CloudFront is broken.</li>
+<li>Everything in the app container runs as uid 1000; folders created by root crash it.</li>
+<li>Long commands pasted into Session Manager can be cut. Paste one short line at a time.</li>
+</ul>
+<h3>8. Change history</h3>
+<p>2026-11-17: written; tested in incident 001 (manual fix 3 min 15 s after the alert); auto-heal added and tested (1 min 38 s, no human); diagnosis table includes the two build faults.</p>
+</main>
+<footer>SAM10 Systems Administration and Maintenance · Final Project · Igor Toledano · Built on <a href="https://github.com/danny-avila/LibreChat">LibreChat</a> (MIT) · Northbridge University is fictional; all data is invented.</footer>
+<div class="zoom" id="z"><img alt=""></div>
+<script>document.querySelectorAll('figure img').forEach(i=>i.onclick=()=>{const z=document.getElementById('z');z.firstChild.src=i.src;z.style.display='flex'});document.getElementById('z').onclick=e=>e.currentTarget.style.display='none';</script>
+</body></html>

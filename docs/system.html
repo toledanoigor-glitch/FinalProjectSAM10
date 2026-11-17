@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>System card · Northbridge University IT Desk (Mabi)</title>
+<link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css"></head>
+<body><header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><nav><a href="index.html">Summary</a><a href="infrastructure.html">AWS design</a><a href="system.html" class=on>System card</a><a href="baseline.html">Baseline</a><a href="well-architected.html">Well-Architected</a><a href="operations.html">Monitoring, backup, security</a><a href="incident.html">Automation & incident</a><a href="results.html">Results</a><a href="next.html">Next steps</a><a href="declaration.html">Declaration</a></nav></div></header>
+<main>
+<h1>Your system: the reskin and the system card</h1>
+<div class="grid2">
+<figure><img src="img/original-librechat.png" alt="BEFORE (E-05): stock LibreChat on the laptop. Generic name, grey theme, any model, any question (2026-11-16)." loading="lazy"><figcaption>BEFORE (E-05): stock LibreChat on the laptop. Generic name, grey theme, any model, any question (2026-11-16).</figcaption></figure>
+<figure><img src="img/mabi-reskin-local.png" alt="AFTER (E-01): Mabi. Northbridge name and logo, navy/teal theme, one fixed assistant, IT Desk answers (2026-11-16)." loading="lazy"><figcaption>AFTER (E-01): Mabi. Northbridge name and logo, navy/teal theme, one fixed assistant, IT Desk answers (2026-11-16).</figcaption></figure>
+</div>
+<figure><img src="img/mabi-https.png" alt="The deployed system at its HTTPS address on AWS (E-02): https://d2f1g5u307k6aa.cloudfront.net" loading="lazy"><figcaption>The deployed system at its HTTPS address on AWS (E-02): https://d2f1g5u307k6aa.cloudfront.net</figcaption></figure>
+
+<h2>SYSTEM CARD: Mabi, Northbridge University IT Desk assistant</h2>
+
+<h3>1. What it does</h3>
+<p>Mabi is a chat assistant that answers everyday IT questions for students and staff of Northbridge University (a fictional university): passwords, MFA, Wi-Fi, email, NBU Drive, software, printing and the computer labs. It answers only from the IT Desk's own documents, and tells people where to go when it cannot help.</p>
+
+<h3>2. Who uses it, and who must not</h3>
+<ul>
+<li><b>Intended users:</b> NBU students and staff with a self-service IT question; IT Desk staff checking what the standard answer is.</li>
+<li><b>Explicitly NOT for:</b> resetting passwords or unlocking accounts; anything about grades, enrolment, fees, scholarships or discipline; any decision about an identifiable person; security incidents in progress (call the IT Desk); anyone who needs a guaranteed-correct answer without checking.</li>
+</ul>
+
+<h3>3. Base system</h3>
+<table>
+<tr><th>Name and version</th><td>LibreChat v0.8.9-rc1 (dev image <code>registry.librechat.ai/librechat-ai/librechat-dev</code>, first run 2026-11-16)</td></tr>
+<tr><th>Source URL</th><td><a href="https://github.com/danny-avila/LibreChat">https://github.com/danny-avila/LibreChat</a></td></tr>
+<tr><th>Author</th><td>Danny Avila and the LibreChat contributors</td></tr>
+<tr><th>Licence</th><td>MIT: <a href="https://github.com/danny-avila/LibreChat/blob/main/LICENSE">LICENSE</a> (copyright notice kept; we may modify and rename)</td></tr>
+<tr><th>What it did originally</th><td>A general ChatGPT-style web app: anyone can sign up, pick from many AI providers and models, and chat about anything.</td></tr>
+</table>
+
+<h3>4. What I changed (the reskin)</h3>
+<table>
+<tr><th>Part</th><th>Original</th><th>Mine</th><th>Why</th></tr>
+<tr><td>Name / branding</td><td>"LibreChat", LibreChat logo, grey/green</td><td>"Northbridge University IT Desk", assistant "Mabi", bridge-and-star logo, navy/teal/gold theme, own favicon and footer</td><td>A stranger should not recognise the original; it should look like a university service</td></tr>
+<tr><td>Data / content</td><td>None</td><td>Six invented IT Desk documents (about, accounts &amp; passwords, Wi-Fi &amp; network, email &amp; software, printing &amp; labs, policies &amp; FAQ)</td><td>Answers must come from the IT Desk, not from the model's general knowledge</td></tr>
+<tr><td>Wording / prompts</td><td>General assistant, no rules</td><td>Mabi's 9 rules: use only the documents; never repeat a password; cannot reset accounts; no grades/fees; ask for no personal details; numbered steps; reply in English/Filipino/Taglish; greeting "Hi, I'm Mabi from the Northbridge University IT Desk…"</td><td>Domain language, and safety for an IT help desk</td></tr>
+<tr><td>Interface</td><td>Model picker, all endpoints, open sign-up</td><td>One fixed assistant (model specs enforced), Google endpoint only, sign-up closed on AWS, social login and password reset off, conversation titles off (saves model quota)</td><td>Fewer choices, smaller attack surface, predictable behaviour</td></tr>
+<tr><td>AWS services</td><td>None (runs anywhere)</td><td>Content in S3, rebuilt into the config at every start; key in Parameter Store; logs and metrics in CloudWatch; backups to S3; SNS alerts</td><td>Required AWS integration beyond hosting; content can be updated without touching the server image</td></tr>
+</table>
+
+<h3>5. Data</h3>
+<ul>
+<li><b>Where it came from:</b> written for this project (with AI help, see the <a href="declaration.html">declaration</a>), stored in <code>content/*.md</code> in the repository and in <code>s3://nbu-itdesk-content-842624819932/content/</code>. No licence issues; it is our own work.</li>
+<li><b>Size and format:</b> 6 Markdown files, about 15 KB in total.</li>
+<li><b>Anything personal in it:</b> <b>No. All invented.</b> Northbridge University, its rooms, prices, addresses and domains (<code>*.northbridge.example</code>) do not exist.</li>
+<li><b>Sent to a third-party AI service:</b> Yes. Every question, the recent conversation and the IT Desk documents are sent to Google's Gemini API (free tier, which Google may use to improve its products). Everything sent is invented. Test users must not type real personal data.</li>
+</ul>
+
+<h3>6. How good it is</h3>
+<ul>
+<li><b>The one number:</b> <b>9 out of 10</b> test questions answered correctly.</li>
+<li><b>How measured:</b> 10 hand-written questions, each in a new chat, answers compared by hand with the content documents (2026-11-17, model <code>gemini-3.5-flash</code>, local Docker). Full table on the <a href="results.html">Results</a> page.</li>
+<li><b>What they covered:</b> simple facts, how-to steps, troubleshooting, prices, a Filipino question, and three limit tests (a typed password, a grade change, a question the documents do not answer).</li>
+<li><b>An example it gets wrong:</b> <i>"Does NBU give students a free laptop?"</i> The documents never mention laptops. Mabi should have said it does not know; instead it said "No" as a fact, and implied CAD software is free for everyone (it is only for Engineering and Architecture). It turns missing information into a confident answer.</li>
+</ul>
+
+<h3>7. How it is served</h3>
+<ul>
+<li><b>Where it runs:</b> Amazon EC2 t3.small (Ubuntu 24.04), Docker, region ap-southeast-1 (Singapore), behind Amazon CloudFront.</li>
+<li><b>What calls it:</b> web browsers at <a href="https://d2f1g5u307k6aa.cloudfront.net">https://d2f1g5u307k6aa.cloudfront.net</a>; LibreChat's API under <code>/api/</code>; health check at <code>/health</code>.</li>
+<li><b>The model:</b> Google <code>gemini-3.5-flash-lite</code> via the Gemini API, <b>free tier</b>, personal account. (Switched from <code>gemini-3.5-flash</code>, which returned 429/503 errors on the free tier.)</li>
+<li><b>If the model is unavailable:</b> the user sees a red error in the chat (for example HTTP 429 "rate limit"). Nothing is lost; they can retry. Failed and empty answers are counted, and the alarms <code>nbu-answers-failed</code> and <code>nbu-empty-answer</code> email the admin.</li>
+</ul>
+<figure><img src="img/error-429.png" alt="A real model failure: Gemini's free tier answered HTTP 429 (rate limit) during testing, shown to the user as a red error." loading="lazy"><figcaption>A real model failure: Gemini's free tier answered HTTP 429 (rate limit) during testing, shown to the user as a red error.</figcaption></figure>
+
+<h3>8. Limitations and risks</h3>
+<ul>
+<li><b>What it cannot do:</b> see or change any account, ticket or setting; know anything not in the six documents; know about events after the documents were written.</li>
+<li><b>What could go wrong with the data:</b> users may type secrets or personal data anyway. Mabi will not repeat a password, but the text is still stored in MongoDB and sent to Google. Answers can be confidently wrong when the documents are silent (see Q10).</li>
+<li><b>How it could be misused:</b> to use up the free model quota (anyone with an account can send many questions); to try to make it ignore its rules (prompt injection). Sign-up is closed to limit both.</li>
+<li><b>What a user must always check themselves:</b> links, prices and opening hours before acting on them; anything to do with their password must be done only on the official password site, never in the chat.</li>
+</ul>
+
+<h3>9. Operational summary</h3>
+<ul>
+<li><b>Where the code lives:</b> <a href="https://github.com/toledanoigor-glitch/FinalProjectSAM10">https://github.com/toledanoigor-glitch/FinalProjectSAM10</a> (branding, content, config builder, deployment and ops scripts).</li>
+<li><b>How often it is backed up:</b> database every night at 02:00 Manila to S3 (kept 14 days); content versioned in S3 and in git; key in Parameter Store.</li>
+<li><b>How we know it is healthy:</b> 9 CloudWatch alarms (site down, server status, CPU, memory, disk, failed answers, empty answers, slow answers, backup missing) emailing the admin; dashboard <code>Mabi-Operations</code>; auto-heal restarts the app if <code>/health</code> fails twice.</li>
+<li><b>Who to contact:</b> Igor Toledano (operator). Test question for a quick check: <i>"What time is the IT Desk open on Saturday?"</i> → 8:00 AM to 12:00 NN.</li>
+</ul>
+</main>
+<footer>SAM10 Systems Administration and Maintenance · Final Project · Igor Toledano · Built on <a href="https://github.com/danny-avila/LibreChat">LibreChat</a> (MIT) · Northbridge University is fictional; all data is invented.</footer>
+<div class="zoom" id="z"><img alt=""></div>
+<script>document.querySelectorAll('figure img').forEach(i=>i.onclick=()=>{const z=document.getElementById('z');z.firstChild.src=i.src;z.style.display='flex'});document.getElementById('z').onclick=e=>e.currentTarget.style.display='none';</script>
+</body></html>
