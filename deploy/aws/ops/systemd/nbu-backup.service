@@ -1,0 +1,8 @@
+[Unit]
+Description=Nightly MongoDB backup to S3
+After=docker.service
+
+[Service]
+Type=oneshot
+Environment=TRIGGER=schedule
+ExecStart=/usr/bin/python3 /opt/nbu/deploy/aws/ops/backup_mongo.py

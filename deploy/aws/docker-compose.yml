@@ -2,6 +2,7 @@
 # Only what Mabi needs: LibreChat (reskinned) + MongoDB.
 # MongoDB has no published port, so it is reachable only inside Docker, never from the internet.
 # Start it with deploy/aws/start-mabi.sh (it writes .env from Parameter Store first).
+# Container output goes to CloudWatch Logs (/nbu/mabi/app and /nbu/mabi/database); `docker logs` still works.
 services:
   api:
     image: northbridge-itdesk-librechat:server
@@ -21,6 +22,14 @@ services:
       - ./librechat.generated.yaml:/app/librechat.yaml:ro
       - ./uploads:/app/uploads
       - ./logs:/app/logs
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-southeast-1
+        awslogs-group: /nbu/mabi/app
+        awslogs-stream: librechat
+        awslogs-create-group: "true"
+        mode: non-blocking
 
   mongodb:
     image: mongo:8.0
@@ -29,3 +38,11 @@ services:
     command: mongod --noauth --bind_ip_all
     volumes:
       - ./data-node:/data/db
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-southeast-1
+        awslogs-group: /nbu/mabi/database
+        awslogs-stream: mongodb
+        awslogs-create-group: "true"
+        mode: non-blocking

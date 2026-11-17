@@ -1,0 +1,7 @@
+[Unit]
+Description=Mabi request logger and custom CloudWatch metrics
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/nbu/deploy/aws/ops/request_metrics.py
