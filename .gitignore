@@ -19,3 +19,6 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated on the server from S3 by deploy/aws/start-mabi.sh
+deploy/aws/librechat.generated.yaml

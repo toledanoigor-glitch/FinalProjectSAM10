@@ -22,7 +22,8 @@ cd "$HERE"
 umask 077
 
 echo "== 1. Build librechat.yaml from the content in s3://$BUCKET/content/ =="
-python3 "$ROOT/scripts/build_config.py" --source s3 --bucket "$BUCKET" --prefix content/
+# Written next to this script (not the Git-tracked librechat.yaml), so "git pull" never conflicts.
+python3 "$ROOT/scripts/build_config.py" --source s3 --bucket "$BUCKET" --prefix content/ --output "$HERE/librechat.generated.yaml"
 
 echo "== 2. Read the Gemini key from Parameter Store =="
 GOOGLE_KEY="$(aws ssm get-parameter --name "$PARAM" --with-decryption --query Parameter.Value --output text)"

@@ -18,7 +18,7 @@ services:
       - HOST=0.0.0.0
       - MONGO_URI=mongodb://mongodb:27017/LibreChat
     volumes:
-      - ../../librechat.yaml:/app/librechat.yaml:ro
+      - ./librechat.generated.yaml:/app/librechat.yaml:ro
       - ./uploads:/app/uploads
       - ./logs:/app/logs
 
