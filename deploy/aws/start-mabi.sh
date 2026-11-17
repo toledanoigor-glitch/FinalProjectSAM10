@@ -8,9 +8,12 @@ REGION="ap-southeast-1"
 BUCKET="nbu-itdesk-content-842624819932"
 PARAM="/nbu/librechat/GOOGLE_KEY"
 MODEL="gemini-3.5-flash"
-# Public address of the site. Change to the CloudFront https:// URL once HTTPS is set up.
-SITE_URL="${SITE_URL:-http://$(curl -s https://checkip.amazonaws.com)}"
-COOKIE_SECURE="${COOKIE_SECURE:-false}"
+# Public HTTPS address of the site (CloudFront). Users never talk to the server directly.
+SITE_URL="${SITE_URL:-https://d2f1g5u307k6aa.cloudfront.net}"
+# Session cookies are only sent over HTTPS.
+COOKIE_SECURE="${COOKIE_SECURE:-true}"
+# Sign-up is closed on the public site; set ALLOW_REGISTRATION=true for one run to add an account.
+ALLOW_REGISTRATION="${ALLOW_REGISTRATION:-false}"
 
 export AWS_DEFAULT_REGION="$REGION"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -49,7 +52,7 @@ GOOGLE_KEY=$GOOGLE_KEY
 GOOGLE_MODELS=$MODEL
 SEARCH=false
 ALLOW_EMAIL_LOGIN=true
-ALLOW_REGISTRATION=true
+ALLOW_REGISTRATION=$ALLOW_REGISTRATION
 ALLOW_SOCIAL_LOGIN=false
 ALLOW_SOCIAL_REGISTRATION=false
 ALLOW_PASSWORD_RESET=false
