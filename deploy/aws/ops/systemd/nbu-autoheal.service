@@ -1,0 +1,7 @@
+[Unit]
+Description=Mabi auto-heal: restart the app if /health fails twice
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/nbu/deploy/aws/ops/autoheal.sh

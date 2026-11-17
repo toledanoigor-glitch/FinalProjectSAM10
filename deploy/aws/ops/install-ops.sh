@@ -11,10 +11,10 @@ mkdir -p /var/log/nbu /var/lib/nbu /var/backups/nbu
 echo "== 2. Rotate our own log files daily, keep 14 days (stops them filling the disk)"
 install -m 644 "$HERE/logrotate-nbu" /etc/logrotate.d/nbu
 
-echo "== 3. systemd timers: request logger every minute, backup every night"
+echo "== 3. systemd timers: request logger + auto-heal every minute, backup every night"
 install -m 644 "$HERE"/systemd/*.service "$HERE"/systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now nbu-request-metrics.timer nbu-backup.timer
+systemctl enable --now nbu-request-metrics.timer nbu-backup.timer nbu-autoheal.timer
 
 echo "== 4. First run of each job now (proves they work)"
 python3 "$HERE/request_metrics.py"

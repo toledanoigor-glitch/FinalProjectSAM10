@@ -18,6 +18,10 @@ NAME="${1:-$(aws s3 ls "s3://$BUCKET/$PREFIX/" | sort | tail -n 1 | awk '{print 
 echo "== 1. Download backup: $NAME"
 aws s3 cp "s3://$BUCKET/$PREFIX/$NAME" "/tmp/$NAME" --only-show-errors
 
+# Tell auto-heal not to "fix" the stack while we deliberately stop it.
+mkdir -p /var/lib/nbu && touch /var/lib/nbu/maintenance
+trap 'rm -f /var/lib/nbu/maintenance' EXIT
+
 cd "$APP"
 echo "== 2. Counts BEFORE (live database)"
 docker exec chat-mongodb mongosh LibreChat --quiet --eval 'print("users=" + db.users.countDocuments() + " conversations=" + db.conversations.countDocuments() + " messages=" + db.messages.countDocuments())' || true
