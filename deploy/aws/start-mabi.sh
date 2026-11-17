@@ -24,6 +24,8 @@ umask 077
 echo "== 1. Build librechat.yaml from the content in s3://$BUCKET/content/ =="
 # Written next to this script (not the Git-tracked librechat.yaml), so "git pull" never conflicts.
 python3 "$ROOT/scripts/build_config.py" --source s3 --bucket "$BUCKET" --prefix content/ --output "$HERE/librechat.generated.yaml"
+# The app runs as uid 1000 inside the container and must be able to read it (umask 077 above makes it root-only).
+chmod 644 "$HERE/librechat.generated.yaml"
 
 echo "== 2. Read the Gemini key from Parameter Store =="
 GOOGLE_KEY="$(aws ssm get-parameter --name "$PARAM" --with-decryption --query Parameter.Value --output text)"
