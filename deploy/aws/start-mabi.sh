@@ -57,7 +57,13 @@ ENV
 cat secrets.env >> .env
 chmod 600 .env secrets.env
 
-echo "== 5. Build and start =="
+echo "== 5. Folders the app writes to =="
+# LibreChat runs as user "node" (uid 1000) inside the container. Docker creates missing
+# bind-mount folders as root, which made LibreChat crash with EACCES on /app/logs.
+mkdir -p logs uploads
+chown -R 1000:1000 logs uploads
+
+echo "== 6. Build and start =="
 docker compose up -d --build
 docker compose ps
 echo "Mabi should be reachable at: $SITE_URL"
