@@ -1,0 +1,14 @@
+# Northbridge University IT Desk override for LibreChat.
+# Copy this file into the LibreChat folder (next to LibreChat's docker-compose.yml).
+# It expects this layout:
+#   C:\sam10\LibreChat\           <- the cloned LibreChat repository
+#   C:\sam10\northbridge-itdesk\  <- this project
+services:
+  api:
+    image: northbridge-itdesk-librechat:local
+    build:
+      context: ../northbridge-itdesk/brand
+    volumes:
+      - type: bind
+        source: ../northbridge-itdesk/librechat.yaml
+        target: /app/librechat.yaml

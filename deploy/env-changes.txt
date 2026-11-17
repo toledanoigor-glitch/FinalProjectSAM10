@@ -1,0 +1,22 @@
+# Changes to make in LibreChat's .env file (C:\sam10\LibreChat\.env)
+# Find each setting in the file and change it to the value below.
+# If a setting is not in the file, add it at the bottom.
+# NEVER commit the .env file or paste your key anywhere else.
+
+# --- Branding ---
+APP_TITLE=Northbridge University IT Desk
+CUSTOM_FOOTER=Mabi · a SAM10 student project built on LibreChat (MIT) · Northbridge University is fictional
+HELP_AND_FAQ_URL=
+
+# --- Only offer our model ---
+ENDPOINTS=google
+
+# --- Google Gemini (free tier) ---
+# Get the key at https://aistudio.google.com/apikey
+GOOGLE_KEY=paste-your-key-here
+GOOGLE_MODELS=gemini-3.5-flash
+
+# --- Accounts ---
+# Leave registration on until you have made your own account, then set it to false.
+ALLOW_REGISTRATION=true
+ALLOW_SOCIAL_LOGIN=false

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Northbridge University IT Desk logo">
+  <circle cx="64" cy="64" r="62" fill="#1B2A4A"/>
+  <path d="M64 16 L67.5 25 L77 25.6 L69.7 31.6 L72 40.8 L64 35.7 L56 40.8 L58.3 31.6 L51 25.6 L60.5 25 Z" fill="#F2B544"/>
+  <path d="M22 78 Q64 30 106 78" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+  <rect x="18" y="76" width="92" height="6" rx="3" fill="#FFFFFF"/>
+  <path d="M43 76 V58 M64 76 V52 M85 76 V58" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M30 82 V96 M98 82 V96" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+  <path d="M26 104 Q36 98 46 104 T66 104 T86 104 T106 104" fill="none" stroke="#2BB3A3" stroke-width="5" stroke-linecap="round"/>
+</svg>
