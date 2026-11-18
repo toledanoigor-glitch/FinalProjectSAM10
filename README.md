@@ -132,7 +132,7 @@ Region `ap-southeast-1`. Never put a key in a file in this repo.
 2. AWS Budget ($1/month, alert above $0.01) and a multi-region CloudTrail trail.
 3. S3 bucket `nbu-itdesk-content-<account-id>` with versioning on; upload `content/*.md` to `content/`.
 4. Parameter Store: `/nbu/librechat/GOOGLE_KEY`, type **SecureString**, value = the Gemini key.
-5. IAM role `NBU-EC2-Role` for EC2: `AmazonSSMManagedInstanceCore`, `CloudWatchAgentServerPolicy`, plus an inline policy for the bucket, the parameter and CloudWatch metrics/logs.
+5. IAM role `NBU-EC2-Role` for EC2: `AmazonSSMManagedInstanceCore`, `CloudWatchAgentServerPolicy`, plus an inline policy for the bucket and the parameter (metrics and logs come from the CloudWatch agent policy).
 6. EC2 t3.small, Ubuntu 24.04, with that role, **no key pair**, security group with **no SSH**.
 7. CloudFront distribution in front of the instance's public DNS (HTTP origin, redirect HTTP→HTTPS, CachingDisabled, AllViewer). Then change the security group's port 80 source to the CloudFront prefix list (`pl-31a34658` in ap-southeast-1).
 
