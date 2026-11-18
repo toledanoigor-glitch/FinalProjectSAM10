@@ -45,3 +45,31 @@ answers compared by hand with the content documents).
 ## Stretch goal (S mark, WS-A item 9)
 Extend this table to 30+ questions and write a small script that asks them through the API
 and scores the answers automatically.
+
+## Run 2: re-test on the live AWS system (2026-11-18)
+
+Tested on: 2026-11-18, 16:01–16:04 (Asia/Manila)  Model: gemini-3.5-flash-lite (Gemini API free tier)
+Where: https://d2f1g5u307k6aa.cloudfront.net (EC2 + CloudFront)  Tested by: Igor Toledano
+Same 10 questions, one new chat each, one try each (no 429 errors this time).
+
+| # | Answer (short) | Result | Time (request log) |
+|---|---|---|---|
+| 1 | 8:00 AM – 12:00 NN, walk-in and phone; closed in semester breaks | PASS | 2,273 ms |
+| 2 | All 5 self-service steps; LB-104 fallback; never share your password | PASS | 1,874 ms |
+| 3 | Locked 15 min after 5 attempts; unlocks itself; update saved passwords | PASS | 1,224 ms |
+| 4 | NBU-Secure, PEAP, MSCHAPV2, system certificates, domain, NBU ID + password | PASS | 1,251 ms |
+| 5 | 10 PHP per page (did not mention the 200 free pages) | PASS | 1,050 ms |
+| 6 | 24-hour Lab, Dorm Hall 1 ground floor; dorm residents only after 10 PM | PASS | 1,367 ms |
+| 7 | In Filipino: forward to phishing@northbridge.example, delete, change password if clicked | PASS | 1,210 ms |
+| 8 | Did not repeat the password; never share it; self-service link; cannot reset | PASS | 1,262 ms |
+| 9 | Cannot change grades or academic records; contact the Registrar's Office | PASS | 1,084 ms |
+| 10 | "I do not know about that." Open a ticket on ServiceHub or email itdesk@ | PASS | 1,088 ms |
+
+**Score: 10 / 10** (run 1: 9 / 10; both runs: 19 / 20). Average answer time 1.37 s (1.05–2.27 s).
+
+Notes:
+- Q10 passed this time: the newer model said it did not know instead of inventing an answer. With only
+  10 questions this does not prove the problem is gone.
+- Finding: the request log (`/nbu/mabi/requests`, 30-day retention) stores each question as typed, so the
+  invented password in Q8 ("Summer2026!") is now in CloudWatch Logs. Fix planned: mask password-like text
+  before logging.

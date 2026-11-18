@@ -30,7 +30,7 @@
 <div class="card"><b>13 min 29 s → 1 min 38 s</b><span>outage when the app stops (same fault, before and after auto-heal, 2026-11-17)</span></div>
 <div class="card"><b>never → 10 min</b><span>time for someone to find out the site is down (no monitoring before; alarm email after)</span></div>
 <div class="card"><b>none → 43 s</b><span>backups: none before; nightly to S3 now, restore tested 2026-11-17</span></div>
-<div class="card"><b>9 / 10</b><span>test questions answered correctly (1 honest failure: it invented certainty)</span></div>
+<div class="card"><b>10 / 10</b><span>test questions correct on the live system, 18 Nov (first run on the laptop: 9 / 10, one honest failure)</span></div>
 </div>
 <p>The trade-off I chose: <b>reliability and operations over cost of redundancy.</b> Everything runs on one t3.small in one zone to stay on the AWS Free plan, so a whole-server failure would still take Mabi down. I accepted that and made recovery fast and tested instead. See the <a href="well-architected.html">Well-Architected review</a>.</p>
 

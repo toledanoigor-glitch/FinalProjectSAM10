@@ -46,6 +46,7 @@
 <figure><img src="img/timers-installed.png" alt="Backup settings (E-10): the backup and request-logger timers installed; first backup ok, 25,150 bytes." loading="lazy"><figcaption>Backup settings (E-10): the backup and request-logger timers installed; first backup ok, 25,150 bytes.</figcaption></figure>
 <figure><img src="img/backup-manual.png" alt="A backup run: mongodump → S3, status ok, 27,192 bytes in 1.0 s (09:18:18 UTC)." loading="lazy"><figcaption>A backup run: mongodump → S3, status ok, 27,192 bytes in 1.0 s (09:18:18 UTC).</figcaption></figure>
 </div>
+<figure><img src="img/backup-nightly.png" alt="The backup log: install run, manual run, and the first scheduled night run at 18:00:08 UTC (02:00 Manila), all ok." loading="lazy"><figcaption>The backup log: install run, manual run, and the first scheduled night run at 18:00:08 UTC (02:00 Manila), all ok.</figcaption></figure>
 
 <h3>Restore test, 2026-11-17 (E-11)</h3>
 <p>To prove the backup is real, I took a backup at 09:18, then asked Mabi a <b>new</b> question (the Wi-Fi question) so the live database had one chat the backup did not. Then I ran <code>restore-mongo.sh</code>: it downloads the newest backup from S3, counts records, stops the stack, moves the live database aside (not deleted), restores into an empty MongoDB, counts again and restarts Mabi.</p>
@@ -112,6 +113,7 @@
 <li>Users: only test accounts created by me. The password in test question 8 ("Summer2026!") is invented for the test.</li>
 <li>Screenshots on this site: checked for keys, tokens and passwords; my personal email was blacked out in three of them.</li>
 <li>Git history: no <code>.env</code>, key or password has ever been committed (<code>.gitignore</code> from the first commit).</li>
+<li><b>Finding (2026-11-18):</b> my own request log copies each question into CloudWatch, so when a user types a password (test Q8, "Summer2026!", invented) it is kept in <code>/nbu/mabi/requests</code> for 30 days. Mabi refuses to repeat it, but the operations tooling still stores it. Fix planned: mask anything that looks like a password or code before logging (see <a href="next.html">next steps</a>).</li>
 <li>Sent outside AWS: only invented questions and content, to Google Gemini.</li>
 </ul>
 </main>

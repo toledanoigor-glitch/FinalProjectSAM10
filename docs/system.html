@@ -51,10 +51,10 @@
 
 <h3>6. How good it is</h3>
 <ul>
-<li><b>The one number:</b> <b>9 out of 10</b> test questions answered correctly.</li>
-<li><b>How measured:</b> 10 hand-written questions, each in a new chat, answers compared by hand with the content documents (2026-11-17, model <code>gemini-3.5-flash</code>, local Docker). Full table on the <a href="results.html">Results</a> page.</li>
+<li><b>The one number:</b> <b>10 out of 10</b> test questions correct on the live AWS system (2026-11-18, <code>gemini-3.5-flash-lite</code>). The first run, on the laptop with <code>gemini-3.5-flash</code> (2026-11-17), scored <b>9 out of 10</b>. Together: 19 of 20.</li>
+<li><b>How measured:</b> the same 10 hand-written questions, each in a new chat, answers compared by hand with the content documents; a pass needs every fact right and no rule broken. Full table on the <a href="results.html">Results</a> page. Ten questions is a small sample, so one question is worth 10 points.</li>
 <li><b>What they covered:</b> simple facts, how-to steps, troubleshooting, prices, a Filipino question, and three limit tests (a typed password, a grade change, a question the documents do not answer).</li>
-<li><b>An example it gets wrong:</b> <i>"Does NBU give students a free laptop?"</i> The documents never mention laptops. Mabi should have said it does not know; instead it said "No" as a fact, and implied CAD software is free for everyone (it is only for Engineering and Architecture). It turns missing information into a confident answer.</li>
+<li><b>An example it gets wrong:</b> <i>"Does NBU give students a free laptop?"</i> In the first run the documents' silence became a confident "No", and it implied CAD software is free for everyone (it is only for Engineering and Architecture). In the second run, with the newer model, it correctly said it does not know and pointed to ServiceHub. The risk has not gone away: with a different question or model it can still turn missing information into a confident answer.</li>
 </ul>
 
 <h3>7. How it is served</h3>
@@ -69,7 +69,7 @@
 <h3>8. Limitations and risks</h3>
 <ul>
 <li><b>What it cannot do:</b> see or change any account, ticket or setting; know anything not in the six documents; know about events after the documents were written.</li>
-<li><b>What could go wrong with the data:</b> users may type secrets or personal data anyway. Mabi will not repeat a password, but the text is still stored in MongoDB and sent to Google. Answers can be confidently wrong when the documents are silent (see Q10).</li>
+<li><b>What could go wrong with the data:</b> users may type secrets or personal data anyway. Mabi will not repeat a password, but the text is still stored in MongoDB, sent to Google, and copied into the CloudWatch request log for 30 days. Answers can be confidently wrong when the documents are silent (see Q10).</li>
 <li><b>How it could be misused:</b> to use up the free model quota (anyone with an account can send many questions); to try to make it ignore its rules (prompt injection). Sign-up is closed to limit both.</li>
 <li><b>What a user must always check themselves:</b> links, prices and opening hours before acting on them; anything to do with their password must be done only on the official password site, never in the chat.</li>
 </ul>
