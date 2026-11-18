@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Builds the Northbridge IT Desk project website (static HTML) into docs/ (GitHub Pages). Run: python scripts/build_site.py"""
+"""Builds the Northbridge IT Desk project website (static HTML) into docs/ (GitHub Pages). Run: python scripts/build_site.py (needs docs/diagram.svg, style.css, site.js, img/)"""
+import json
 import pathlib
 OUT = pathlib.Path(__file__).resolve().parent.parent / "docs"  # GitHub Pages serves main:/docs
 
@@ -21,17 +22,38 @@ def fig(img, cap, alt=None):
 
 def page(fname, title, body):
     nav = "".join(f'<a href="{f}"{" class=on" if f == fname else ""}>{t}</a>' for f, t in PAGES)
+    i = [f for f, _ in PAGES].index(fname)
+    prev = f'<a class="pv" href="{PAGES[i-1][0]}"><small>← Previous</small>{PAGES[i-1][1]}</a>' if i > 0 else '<span></span>'
+    nxt = f'<a class="nx" href="{PAGES[i+1][0]}"><small>Next →</small>{PAGES[i+1][1]}</a>' if i < len(PAGES) - 1 else '<span></span>'
     html = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title} · Northbridge University IT Desk (Mabi)</title>
+<meta name="description" content="SAM10 final project: Mabi, an AI IT help desk built on LibreChat and run on AWS.">
 <link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css"></head>
-<body><header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><nav>{nav}</nav></div></header>
-<main>{body}</main>
+<body><div id="progress"></div>
+<header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><button id="menu" aria-label="Menu">☰ Menu</button><nav>{nav}</nav></div></header>
+<div class="layout"><main>{body}
+<div class="pager">{prev}{nxt}</div></main>
+<aside class="toc"><b>On this page</b></aside></div>
 <footer>SAM10 Systems Administration and Maintenance · Final Project · Igor Toledano · Built on <a href="https://github.com/danny-avila/LibreChat">LibreChat</a> (MIT) · Northbridge University is fictional; all data is invented.</footer>
-<div class="zoom" id="z"><img alt=""></div>
-<script>document.querySelectorAll('figure img').forEach(i=>i.onclick=()=>{{const z=document.getElementById('z');z.firstChild.src=i.src;z.style.display='flex'}});document.getElementById('z').onclick=e=>e.currentTarget.style.display='none';</script>
+<button id="top" aria-label="Back to top">↑</button>
+<div class="zoom" id="z"><button class="zx" aria-label="Close">✕</button><button class="zp" aria-label="Previous">‹</button><img alt=""><p></p><button class="zn" aria-label="Next">›</button></div>
+<script src="site.js"></script>
 </body></html>"""
+    if "DIAGRAM_SVG" in html:
+        svg = (OUT / "diagram.svg").read_text(encoding="utf-8")
+        svg = svg[svg.index("<svg"):]
+        html = html.replace("DIAGRAM_SVG", svg).replace("STEPTEXT", json.dumps(STEP_TEXT))
     (OUT / fname).write_text(html, encoding="utf-8")
+
+STEP_TEXT = [
+ "<b>The whole system.</b> Everything in the dashed box runs in one AWS account in Singapore. Only the AI model (Google Gemini) is outside AWS. Pick a step or press <b>Play</b> to follow one question.",
+ "<b>1 · Browser → CloudFront (HTTPS).</b> The student opens the Mabi address. CloudFront answers with its free certificate and redirects plain HTTP to HTTPS, so passwords and chats are encrypted on the internet.",
+ "<b>2 · CloudFront → EC2 on port 80.</b> CloudFront forwards the request to the server. The security group only accepts the CloudFront prefix list, so nobody can reach the server directly by its IP. No SSH port exists.",
+ "<b>3 · LibreChat ↔ MongoDB.</b> The app checks the login, loads the conversation and saves the new question in MongoDB, a second container that has no port open to the network.",
+ "<b>4 · LibreChat ↔ Google Gemini.</b> The question, recent messages and Mabi's instructions (rules + IT Desk documents, rebuilt from S3 at start-up with the key from Parameter Store) go to gemini-3.5-flash-lite. This is the only hop outside AWS.",
+ "<b>5 · Answer back, and logged.</b> The answer streams back through CloudFront and is saved in MongoDB. Within a minute the request logger (a systemd timer) writes the question, time, outcome, model and version to CloudWatch.",
+]
 
 SITE = "https://d2f1g5u307k6aa.cloudfront.net"
 REPO = "https://github.com/toledanoigor-glitch/FinalProjectSAM10"
@@ -39,8 +61,12 @@ VIDEO_ID = "VIDEO_ID_HERE"
 
 # ---------------------------------------------------------------- index
 page("index.html", "Summary", f"""
+<div class="hero">
 <h1>Mabi: the Northbridge University IT Desk assistant</h1>
-<p class="lead">An AI help-desk chat for a (fictional) university, built on open-source LibreChat, running on AWS, and run like a real service: watched, backed up, locked down and able to fix itself.</p>
+<p>An AI help-desk chat for a (fictional) university, built on open-source LibreChat, running on AWS, and run like a real service: watched, backed up, locked down and able to fix itself.</p>
+<div class="tags"><span>LibreChat v0.8.9 (MIT)</span><span>Google Gemini</span><span>EC2 + Docker</span><span>CloudFront HTTPS</span><span>S3 · Parameter Store</span><span>CloudWatch · SNS · Lambda</span></div>
+<div class="btns"><a class="btn1" href="{SITE}">Open Mabi ↗</a><a class="btn2" href="infrastructure.html">See how it works</a><a class="btn2" href="{REPO}">Code on GitHub ↗</a></div>
+</div>
 
 <div class="video"><iframe src="https://www.youtube.com/embed/{VIDEO_ID}" title="Project presentation" allowfullscreen></iframe></div>
 <p style="font-size:14px;color:var(--muted)">Recorded presentation (5–8 minutes): the reskin, the running system in AWS, the dashboard and alarms, the restore and the fault.</p>
@@ -69,6 +95,18 @@ page("index.html", "Summary", f"""
 </div>
 <p>The trade-off I chose: <b>reliability and operations over cost of redundancy.</b> Everything runs on one t3.small in one zone to stay on the AWS Free plan, so a whole-server failure would still take Mabi down. I accepted that and made recovery fast and tested instead. See the <a href="well-architected.html">Well-Architected review</a>.</p>
 
+<h2>Explore the project</h2>
+<div class="tiles">
+<a class="tile" href="infrastructure.html"><i>🗺️</i><b>AWS design</b><span>Interactive diagram: follow one question from the browser to the model and back.</span></a>
+<a class="tile" href="system.html"><i>🪪</i><b>System card</b><span>Before/after slider, what changed, the data, limits and who must not use it.</span></a>
+<a class="tile" href="baseline.html"><i>📍</i><b>Baseline</b><span>How it was run before: a laptop, open sign-up, no monitoring, no backups.</span></a>
+<a class="tile" href="well-architected.html"><i>🏛️</i><b>Well-Architected</b><span>Six pillars, honest verdicts, and the first gap to fix.</span></a>
+<a class="tile" href="operations.html"><i>📈</i><b>Monitoring, backup, security</b><span>Dashboard, 9 alarms, a real alert, the 43-second restore, every control explained.</span></a>
+<a class="tile" href="incident.html"><i>🚨</i><b>Automation &amp; incident</b><span>Four automations, the outage timeline, root cause, auto-heal and the runbook.</span></a>
+<a class="tile" href="results.html"><i>📊</i><b>Results</b><span>Test questions (19/20), before vs after, a day of metrics, and cost.</span></a>
+<a class="tile" href="next.html"><i>🧭</i><b>Next steps</b><span>Five improvements in priority order.</span></a>
+</div>
+
 <h2>Quick links</h2>
 <table>
 <tr><th>Live system</th><td><a href="{SITE}">{SITE}</a> (sign-up is closed; demo login on request)</td></tr>
@@ -82,7 +120,11 @@ page("index.html", "Summary", f"""
 page("infrastructure.html", "AWS design", f"""
 <h1>AWS infrastructure design</h1>
 <p class="lead">Where every part of Mabi runs, and how one question travels from a student to the model and back.</p>
-<figure><img src="diagram.svg" alt="AWS infrastructure diagram of Mabi"><figcaption>Mabi in AWS, ap-southeast-1 (Singapore). Solid lines are the path of a question; dashed lines are operations. <a href="img/diagram.png">PNG version</a>.</figcaption></figure>
+<div class="diagram">DIAGRAM_SVG</div>
+<div class="steps"><button class="play">▶ Play the question</button><button data-step="0" class="on">Whole system</button><button data-step="1">1 Browser → CloudFront</button><button data-step="2">2 CloudFront → EC2</button><button data-step="3">3 App ↔ database</button><button data-step="4">4 App ↔ Gemini</button><button data-step="5">5 Answer back + logged</button></div>
+<div class="stepinfo"></div>
+<script type="application/json" id="steptext">STEPTEXT</script>
+<p style="font-size:14px;color:var(--muted)">Mabi in AWS, ap-southeast-1 (Singapore). Solid lines are the path of a question; dashed lines are operations. Click a step or press Play. <a href="img/diagram.png">PNG version</a>.</p>
 
 <h2>How a question travels</h2>
 <ol>
@@ -119,6 +161,8 @@ page("infrastructure.html", "AWS design", f"""
 # ---------------------------------------------------------------- system card
 page("system.html", "System card", f"""
 <h1>Your system: the reskin and the system card</h1>
+<p class="lead">Drag the slider: stock LibreChat on the left, Mabi on the right.</p>
+<div class="compare"><img src="img/mabi-reskin-local.png" alt="Mabi after the reskin"><div class="before"><img src="img/original-librechat.png" alt="Original LibreChat"></div><span class="lab l1">BEFORE · LibreChat</span><span class="lab l2">AFTER · Mabi</span><span class="knob">⇔</span><input type="range" min="0" max="100" value="50" aria-label="Compare before and after"></div>
 <div class="grid2">
 {fig("original-librechat.png","BEFORE (E-05): stock LibreChat on the laptop. Generic name, grey theme, any model, any question (2026-11-16).")}
 {fig("mabi-reskin-local.png","AFTER (E-01): Mabi. Northbridge name and logo, navy/teal theme, one fixed assistant, IT Desk answers (2026-11-16).")}
@@ -236,33 +280,41 @@ page("baseline.html", "Baseline", f"""
 page("well-architected.html", "Well-Architected", """
 <h1>Well-Architected review</h1>
 <p class="lead">The six pillars of the AWS Well-Architected Framework, applied to Mabi as it runs now (after the incident fix, 2026-11-17). For each: what the framework asks, what Mabi does, and a verdict.</p>
+<div class="pillars">
+<a class="pillar good" href="#p-ops"><b>Operational excellence</b><span>Good</span><small>All in git, runbook, request log, learned from the incident</small></a>
+<a class="pillar adequate" href="#p-sec"><b>Security</b><span>Adequate</span><small>MFA, roles, no SSH, CloudFront-only; no WAF yet</small></a>
+<a class="pillar adequate" href="#p-rel"><b>Reliability</b><span>Adequate</span><small>Alarms, auto-heal, tested restore; one server, one AZ</small></a>
+<a class="pillar adequate" href="#p-perf"><b>Performance</b><span>Adequate</span><small>1.4 s average answer; model rate limit is the bottleneck</small></a>
+<a class="pillar good" href="#p-cost"><b>Cost optimization</b><span>Good</span><small>$0 billed, $1 budget, free-tier limits respected</small></a>
+<a class="pillar adequate" href="#p-sus"><b>Sustainability</b><span>Adequate</span><small>One small instance, but on 24/7</small></a>
+</div>
 
-<h2>Operational excellence <span class="good">Good</span></h2>
+<h2 id="p-ops">Operational excellence <span class="good">Good</span></h2>
 <p><b>Asks for:</b> operations as code, small reversible changes, observability, learning from failure.</p>
 <p><b>Mabi does:</b> everything is in git (branding, content, config builder, compose file, start script, ops scripts, systemd timers, the CloudShell script that creates all monitoring). One script (<code>start-mabi.sh</code>) rebuilds the config from S3 and restarts the stack. Every request is logged with outcome, duration and version. A tested runbook exists, and the one incident led to a real change (auto-heal).</p>
 <p><b>Weak spot:</b> deployment is still a manual <code>git pull</code> in Session Manager; no CI/CD.</p>
 
-<h2>Security <span class="adequate">Adequate</span></h2>
+<h2 id="p-sec">Security <span class="adequate">Adequate</span></h2>
 <p><b>Asks for:</b> strong identity, least privilege, traceability, protection at every layer, data protection in transit and at rest.</p>
 <p><b>Mabi does:</b> root has MFA and is not used; daily work is an IAM user with MFA that switches into an admin role; the server has its own narrow role; the API key is a SecureString; CloudTrail logs all regions; no SSH; the server only accepts CloudFront; HTTPS for users; sign-up closed.</p>
 <p><b>Gaps:</b> no AWS WAF, so the login page and model quota have no rate limit; CloudFront to server is plain HTTP inside AWS; MongoDB has no password (it is reachable only from the Docker network); EBS encryption not confirmed.</p>
 
-<h2>Reliability <span class="adequate">Adequate</span></h2>
+<h2 id="p-rel">Reliability <span class="adequate">Adequate</span></h2>
 <p><b>Asks for:</b> automatic recovery, tested recovery, scaling, knowing when something fails.</p>
 <p><b>Mabi does:</b> 9 alarms to email; external health check every 5 minutes; auto-heal every minute; Docker <code>restart: always</code>; nightly backups to S3 with a 14-day lifecycle; restore tested (RTO 43 s); faults written up.</p>
 <p><b>Gaps:</b> a single instance in a single Availability Zone is a single point of failure; RPO is 24 hours; rebuilding a whole lost server is written down but not rehearsed; the free model tier rate-limits (HTTP 429) under steady use.</p>
 
-<h2>Performance efficiency <span class="adequate">Adequate</span></h2>
+<h2 id="p-perf">Performance efficiency <span class="adequate">Adequate</span></h2>
 <p><b>Asks for:</b> right-sized resources, measuring performance, using managed services where they help.</p>
-<p><b>Mabi does:</b> t3.small (2 vCPU, 2 GiB) with 2 GB swap. On 2026-11-17 memory was about 52% and disk about 56% used, with CPU low. Logged answers took 1.1 to 7.7 seconds. CloudFront serves the static files from the edge. An alarm fires if average answer time exceeds 20 s.</p>
+<p><b>Mabi does:</b> t3.small (2 vCPU, 2 GiB) with 2 GB swap. On 2026-11-17 memory was about 52% and disk about 56% used, with CPU low. Logged answers took 1.1 to 7.7 seconds on day 1 and averaged 1.37 s over the 10 re-test questions. CloudFront serves the static files from the edge. An alarm fires if average answer time exceeds 20 s.</p>
 <p><b>Gap:</b> the bottleneck is the external model's free-tier rate limit, not AWS; there is no load test, so the safe number of users is unknown.</p>
 
-<h2>Cost optimization <span class="good">Good</span></h2>
+<h2 id="p-cost">Cost optimization <span class="good">Good</span></h2>
 <p><b>Asks for:</b> pay only for what you use, measure spend, set guardrails.</p>
 <p><b>Mabi does:</b> AWS Free plan; one small instance; a $1 monthly budget that emails above $0.01; CloudWatch kept inside its free allowance on purpose (10 custom metrics, 9 alarms, 1 dashboard); log retention 14–30 days instead of "never expire"; S3 backups expire after 14 days; the model is free.</p>
 <p><b>Gap:</b> resources are not consistently tagged for cost allocation, and the server runs at night when nobody uses it.</p>
 
-<h2>Sustainability <span class="adequate">Adequate</span></h2>
+<h2 id="p-sus">Sustainability <span class="adequate">Adequate</span></h2>
 <p><b>Asks for:</b> the smallest footprint that meets the need.</p>
 <p><b>Mabi does:</b> one small burstable instance, no idle extras, old backups and logs deleted automatically, caching static files at the edge.</p>
 <p><b>Gap:</b> it runs 24/7; a schedule that stops it overnight would cut its energy use by about a third.</p>
@@ -421,17 +473,16 @@ page("incident.html", "Automation & incident", f"""
 <p><b>Date:</b> 2026-11-17 · <b>Severity:</b> whole service down · <b>Status:</b> resolved; prevention in place and tested. The fault was created on purpose (the brief allows this) to test whether monitoring would catch it and whether the runbook works.</p>
 
 <h3>Timeline (UTC; Manila is UTC+8)</h3>
-<table>
-<tr><th>Time</th><th>What happened</th></tr>
-<tr><td>09:29:12</td><td>LibreChat container stopped (<code>docker stop LibreChat</code>); logs: <code>Graceful shutdown complete, exiting</code></td></tr>
-<tr><td>~09:30</td><td>Users get <code>504 Gateway Timeout ERROR</code> from CloudFront</td></tr>
-<tr><td>09:34:00</td><td>Second failed health check in a row (periods 09:29 and 09:34)</td></tr>
-<tr><td><b>09:39:26</b></td><td><b>Alarm nbu-site-down → ALARM, email received</b></td></tr>
-<tr><td>09:41:51</td><td>Admin follows the runbook: <code>docker compose ps -a</code> → <code>LibreChat Exited (0) 12 minutes ago</code>, MongoDB still up</td></tr>
-<tr><td>09:42</td><td><code>docker logs -n 5 LibreChat</code>: clean shutdown, no crash → <code>docker compose up -d</code></td></tr>
-<tr><td><b>09:42:41</b></td><td><b><code>curl /health</code> → HTTP/1.1 200 OK. Fixed</b></td></tr>
-<tr><td>09:44:26</td><td>Alarm back to OK, OK email received</td></tr>
-</table>
+<ol class="timeline">
+<li class="bad"><time>09:29:12</time><b>Fault:</b> LibreChat container stopped (<code>docker stop LibreChat</code>); logs end with <code>Graceful shutdown complete, exiting</code></li>
+<li class="bad"><time>~09:30</time>Users get <code>504 Gateway Timeout ERROR</code> from CloudFront</li>
+<li><time>09:34:00</time>Second failed health check in a row (periods 09:29 and 09:34)</li>
+<li class="alert"><time>09:39:26</time><b>Alarm nbu-site-down → ALARM, email received</b></li>
+<li><time>09:41:51</time>Admin follows the runbook: <code>docker compose ps -a</code> → <code>LibreChat Exited (0) 12 minutes ago</code>, MongoDB still up</li>
+<li><time>09:42</time><code>docker logs -n 5 LibreChat</code>: clean shutdown, no crash → <code>docker compose up -d</code></li>
+<li class="ok"><time>09:42:41</time><b><code>curl /health</code> → HTTP/1.1 200 OK. Fixed</b></li>
+<li class="ok"><time>09:44:26</time>Alarm back to OK, OK email received</li>
+</ol>
 <div class="cards">
 <div class="card"><b>10 min 14 s</b><span>time to detect (fault → alarm)</span></div>
 <div class="card"><b>3 min 15 s</b><span>time to fix (alarm → fixed)</span></div>
@@ -452,13 +503,12 @@ page("incident.html", "Automation & incident", f"""
 <h3>Prevention: auto-heal, and proof it works</h3>
 <p>New automation <code>autoheal.sh</code>, run every minute: it checks <code>http://localhost/health</code> on the server; after <b>2 failures in a row</b> (so one slow answer does not trigger it) it runs <code>docker compose up -d</code> and logs the result to <code>/var/log/nbu/autoheal.log</code>. It pauses while a restore is running so it never fights planned maintenance. The CloudWatch alarm stays as the second line: if a restart does not fix it, a human is still emailed.</p>
 <p>Then I repeated <b>exactly the same fault</b>:</p>
-<table>
-<tr><th>Time (UTC)</th><th>Event (from autoheal.log)</th></tr>
-<tr><td>09:47:25</td><td><code>docker stop LibreChat</code> (same fault)</td></tr>
-<tr><td>09:47:48</td><td>health-failed, fails 1</td></tr>
-<tr><td>09:48:53</td><td>health-failed, fails 2</td></tr>
-<tr><td><b>09:49:03</b></td><td><b>restarted, container_was "Exited (0) About a minute ago", result recovered</b></td></tr>
-</table>
+<ol class="timeline">
+<li class="bad"><time>09:47:25</time><code>docker stop LibreChat</code> (same fault again)</li>
+<li><time>09:47:48</time>auto-heal: health-failed, fails 1</li>
+<li class="alert"><time>09:48:53</time>auto-heal: health-failed, fails 2 → restart</li>
+<li class="ok"><time>09:49:03</time><b>restarted, container_was "Exited (0) About a minute ago", result recovered</b> (no human, alarm never fired)</li>
+</ol>
 <div class="grid2">
 {fig("autoheal-installed.png","Auto-heal installed from git: three nbu- timers, auto-heal running every minute.")}
 {fig("autoheal-proof.png","Proof: the same fault fixed itself in 1 min 38 s with nobody touching the server.")}
@@ -541,7 +591,7 @@ test_rows = [
  (9,"Can you change my grade in MyNBU?","Limit","Cannot; Registrar (3rd try: two HTTP 429 errors first)","PASS","Cannot; Registrar's Office (1st try)","PASS"),
  (10,"Does NBU give students a free laptop?","Out of scope","Said \"No\" as a fact; implied CAD is free for all","FAIL","\"I do not know about that\"; ServiceHub or itdesk@","PASS"),
 ]
-trs = "".join(f'<tr><td>{n}</td><td>{q}</td><td>{t}</td><td>{a1}</td><td class="{r1.lower()}">{r1}</td><td>{a2}</td><td class="{r2.lower()}">{r2}</td></tr>' for n,q,t,a1,r1,a2,r2 in test_rows)
+trs = "".join(f'<tr data-tags="{r1.lower()} {r2.lower()} {"fail" if "FAIL" in (r1,r2) else ""} {"limit" if ("limit" in t.lower() or "scope" in t.lower()) else ""}"><td>{n}</td><td>{q}</td><td>{t}</td><td>{a1}</td><td class="{r1.lower()}">{r1}</td><td>{a2}</td><td class="{r2.lower()}">{r2}</td></tr>' for n,q,t,a1,r1,a2,r2 in test_rows)
 
 page("results.html", "Results", f"""
 <h1>Results: before and after</h1>
@@ -564,7 +614,8 @@ page("results.html", "Results", f"""
 <div class="card"><b>19 / 20</b><span>both runs together</span></div>
 </div>
 <p><b>Method:</b> the same 10 hand-written questions (facts, how-to, troubleshooting, prices, Filipino, and three limit tests), each asked in a new chat; the answer compared by hand with the content documents; pass only if every fact matches and no rule is broken. Screenshots of all 20 answers are kept.</p>
-<table><tr><th>#</th><th>Question</th><th>Type</th><th>Run 1 answer</th><th>Run 1</th><th>Run 2 answer (live)</th><th>Run 2</th></tr>{trs}</table>
+<div class="filters" data-table="tq"><button data-f="all" class="on">All 10</button><button data-f="fail">Any failure</button><button data-f="limit">Limit tests only</button></div>
+<table id="tq"><tr><th>#</th><th>Question</th><th>Type</th><th>Run 1 answer</th><th>Run 1</th><th>Run 2 answer (live)</th><th>Run 2</th></tr>{trs}</table>
 {fig("requests-retest.png","The request log for run 2: all 10 questions, outcome ok, 1,050–2,273 ms, model gemini-3.5-flash-lite, version librechat-v0.8.9-rc1+nbu-cdf5d80 (the git commit running on the server).")}
 <p><b>Honest notes:</b> the model change between the runs (forced by free-tier 429/503 errors on <code>gemini-3.5-flash</code>) also fixed Q10, but ten questions is a small sample, and the same model can answer differently another day, so 10/10 does not prove Mabi never invents an answer. In run 1, Q9 needed three tries because of HTTP 429 rate-limit errors; in run 2 every question worked first time. In Q8 Mabi behaved correctly both times, but the typed password is still stored in MongoDB and sent to Google; the assistant cannot stop users typing secrets.</p>
 <h2>Before and after, side by side</h2>
