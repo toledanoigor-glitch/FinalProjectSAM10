@@ -8,6 +8,7 @@ SAM10 Systems Administration and Maintenance — Final Project (individual).
 
 - **Live system:** https://d2f1g5u307k6aa.cloudfront.net (sign-up closed)
 - **Project website:** https://toledanoigor-glitch.github.io/FinalProjectSAM10/ (built from `docs/` by `scripts/build_site.py`)
+- **Presentation video (6:42):** https://youtu.be/OhcbW68HYYs
 
 ## Credits and licence (base system)
 | | |

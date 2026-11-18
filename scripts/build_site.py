@@ -58,7 +58,7 @@ STEP_TEXT = [
 
 SITE = "https://d2f1g5u307k6aa.cloudfront.net"
 REPO = "https://github.com/toledanoigor-glitch/FinalProjectSAM10"
-VIDEO_ID = "VIDEO_ID_HERE"
+VIDEO_ID = "OhcbW68HYYs"
 
 # ---------------------------------------------------------------- index
 page("index.html", "Summary", f"""
@@ -69,8 +69,8 @@ page("index.html", "Summary", f"""
 <div class="btns"><a class="btn1" href="{SITE}">Open Mabi ↗</a><a class="btn2" href="infrastructure.html">See how it works</a><a class="btn2" href="{REPO}">Code on GitHub ↗</a></div>
 </div>
 
-<div class="video"><iframe src="https://www.youtube.com/embed/{VIDEO_ID}" title="Project presentation" allowfullscreen></iframe></div>
-<p style="font-size:14px;color:var(--muted)">Recorded presentation (5–8 minutes): the reskin, the running system in AWS, the dashboard and alarms, the restore and the fault.</p>
+<div class="video"><iframe src="https://www.youtube.com/embed/{VIDEO_ID}" title="Project presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+<p style="font-size:14px;color:var(--muted)">Recorded presentation (6 min 42 s): the reskin, the running system in AWS, the dashboard and alarms, the restore and the fault. <a href="https://youtu.be/{VIDEO_ID}">Watch on YouTube ↗</a></p>
 
 <h2>What the system does</h2>
 <p>Students and staff of Northbridge University open <a href="{SITE}">{SITE}</a>, log in and ask <b>Mabi</b> everyday IT questions: <i>"I forgot my password"</i>, <i>"How do I connect my phone to the Wi-Fi?"</i>, <i>"How much is a colour print?"</i>. Mabi answers in English, Filipino or Taglish, using only the IT Desk's own information. It refuses things it must not do: it never repeats a password, cannot reset accounts, and sends grade questions to the Registrar.</p>
