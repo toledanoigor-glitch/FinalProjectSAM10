@@ -10,8 +10,8 @@ PAGES = [
     ("system.html", "System card"),
     ("baseline.html", "Baseline"),
     ("well-architected.html", "Well-Architected"),
-    ("operations.html", "Monitoring, backup, security"),
-    ("incident.html", "Automation & incident"),
+    ("operations.html", "Operations"),
+    ("incident.html", "Incident"),
     ("results.html", "Results"),
     ("next.html", "Next steps"),
     ("declaration.html", "Declaration"),
@@ -29,16 +29,17 @@ def page(fname, title, body):
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title} · Northbridge University IT Desk (Mabi)</title>
 <meta name="description" content="SAM10 final project: Mabi, an AI IT help desk built on LibreChat and run on AWS.">
-<link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css"></head>
+<link rel="icon" href="logo.svg"><link rel="stylesheet" href="style.css?v=5"></head>
 <body><div id="progress"></div>
-<header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt="">Northbridge IT Desk · Mabi</a><button id="menu" aria-label="Menu">☰ Menu</button><nav>{nav}</nav></div></header>
+<header><div class="bar"><a class="brand" href="index.html"><img src="logo.svg" alt=""><span>Northbridge University IT Desk<small>Mabi · SAM10 final project · Igor Toledano</small></span></a><a class="cta" href="https://d2f1g5u307k6aa.cloudfront.net">Open Mabi ↗</a></div>
+<nav class="tabs"><div class="tabin">{nav}</div></nav></header>
 <div class="layout"><main>{body}
 <div class="pager">{prev}{nxt}</div></main>
-<aside class="toc"><b>On this page</b></aside></div>
+<aside class="toc"><b>On this page</b><div class="toclist"></div><div class="tocbar"><i></i></div><a class="toctop" href="#">↑ Back to top</a></aside></div>
 <footer>SAM10 Systems Administration and Maintenance · Final Project · Igor Toledano · Built on <a href="https://github.com/danny-avila/LibreChat">LibreChat</a> (MIT) · Northbridge University is fictional; all data is invented.</footer>
 <button id="top" aria-label="Back to top">↑</button>
 <div class="zoom" id="z"><button class="zx" aria-label="Close">✕</button><button class="zp" aria-label="Previous">‹</button><img alt=""><p></p><button class="zn" aria-label="Next">›</button></div>
-<script src="site.js"></script>
+<script src="site.js?v=7"></script>
 </body></html>"""
     if "DIAGRAM_SVG" in html:
         svg = (OUT / "diagram.svg").read_text(encoding="utf-8")
@@ -101,8 +102,8 @@ page("index.html", "Summary", f"""
 <a class="tile" href="system.html"><i>🪪</i><b>System card</b><span>Before/after slider, what changed, the data, limits and who must not use it.</span></a>
 <a class="tile" href="baseline.html"><i>📍</i><b>Baseline</b><span>How it was run before: a laptop, open sign-up, no monitoring, no backups.</span></a>
 <a class="tile" href="well-architected.html"><i>🏛️</i><b>Well-Architected</b><span>Six pillars, honest verdicts, and the first gap to fix.</span></a>
-<a class="tile" href="operations.html"><i>📈</i><b>Monitoring, backup, security</b><span>Dashboard, 9 alarms, a real alert, the 43-second restore, every control explained.</span></a>
-<a class="tile" href="incident.html"><i>🚨</i><b>Automation &amp; incident</b><span>Four automations, the outage timeline, root cause, auto-heal and the runbook.</span></a>
+<a class="tile" href="operations.html"><i>📈</i><b>Operations: monitoring, backup, security</b><span>Dashboard, 9 alarms, a real alert, the 43-second restore, every control explained.</span></a>
+<a class="tile" href="incident.html"><i>🚨</i><b>Incident &amp; automation</b><span>Four automations, the outage timeline, root cause, auto-heal and the runbook.</span></a>
 <a class="tile" href="results.html"><i>📊</i><b>Results</b><span>Test questions (19/20), before vs after, a day of metrics, and cost.</span></a>
 <a class="tile" href="next.html"><i>🧭</i><b>Next steps</b><span>Five improvements in priority order.</span></a>
 </div>

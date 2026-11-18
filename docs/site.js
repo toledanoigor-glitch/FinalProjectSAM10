@@ -13,25 +13,39 @@
     const h = document.documentElement;
     const p = h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight);
     prog.style.width = (p * 100) + '%';
+    const tb = $('.tocbar i'); if (tb) tb.style.width = (p * 100) + '%';
     top.classList.toggle('show', h.scrollTop > 600);
   };
-  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  addEventListener('scroll', onScroll, { passive: true });
   top.onclick = () => scrollTo({ top: 0 });
+  const tt = $('.toctop'); if (tt) tt.onclick = e => { e.preventDefault(); scrollTo({ top: 0 }); };
+  // keep the current tab visible in the scrolling tab strip
+  const on = $('.tabs a.on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
 
   // "On this page" table of contents from the h2 headings, with scroll-spy
-  const toc = $('.toc'), heads = $$('main h2');
+  const toc = $('.toc'), tl = $('.toclist');
+  let heads = $$('main h2'); if (heads.length < 2) heads = $$('main h3');
   if (toc && heads.length > 1) {
     heads.forEach((h, i) => {
       if (!h.id) h.id = 's' + i + '-' + h.textContent.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
       const a = document.createElement('a'); a.href = '#' + h.id;
-      a.textContent = h.childNodes[0].textContent.trim(); toc.appendChild(a);
+      const c = h.cloneNode(true); c.querySelectorAll('.good,.adequate,.gap').forEach(x => x.remove()); a.textContent = c.textContent.replace(/\s+/g, ' ').trim().replace(/^\d+\.\s*/, ''); tl.appendChild(a);
     });
-    const links = $$('a', toc);
-    const spy = new IntersectionObserver(es => es.forEach(e => {
-      if (e.isIntersecting) links.forEach(l => l.classList.toggle('on', l.getAttribute('href') === '#' + e.target.id));
-    }), { rootMargin: '-80px 0px -70% 0px' });
-    heads.forEach(h => spy.observe(h));
+    const links = $$('a', tl);
+    let lock = 0;
+    const mark = i => links.forEach((l, k) => l.classList.toggle('on', k === i));
+    const spy = () => {
+      if (Date.now() < lock) return;
+      const h = document.documentElement;
+      if (h.scrollTop + innerHeight >= h.scrollHeight - 4) return mark(heads.length - 1); // at the bottom: last section
+      let i = 0;
+      heads.forEach((hd, k) => { if (hd.getBoundingClientRect().top <= 140) i = k; });
+      mark(i);
+    };
+    links.forEach((l, k) => l.addEventListener('click', () => { mark(k); lock = Date.now() + 900; }));
+    addEventListener('scroll', spy, { passive: true }); addEventListener('resize', spy); spy();
   } else if (toc) toc.remove();
+  onScroll();
 
   // Fade-in on scroll
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -40px 0px' });
